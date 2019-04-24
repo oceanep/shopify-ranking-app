@@ -1,5 +1,6 @@
 const ShopifyAPIClient = require("shopify-api-node");
 const functions = require('../functions');
+const db = require('../../db')
 
 module.exports = (router) => {
   router
@@ -13,12 +14,15 @@ module.exports = (router) => {
     // GET one month 
     // GET three months 
     // etc.
-    .get("/hello", (ctx, next) => {
+    .get("/hello", async (ctx, next) => {
       const {views, shop} = ctx.session;
       var n = views || 0;
       ctx.session.views = ++n;
       if (n === 1) ctx.body = "Welcome here for the first time!";
       else ctx.body = "You've visited this " + shop + " " + n + " times!";
+      const values = ['00001', 'ppppx', 1, 3, '2019-01-01T00:00:02']
+      const queryText = 'INSERT INTO orders_products(order_id, product_id, month, week, created_at) VALUES($1, $2, $3, $4, $5)'
+      db.query(queryText, ['00001', 'ppppx', 1, 3, '2019-01-01T00:00:02'], () => {console.log("here")})
     })
     .get("/api/installation", (ctx, next) => {
       const {shop, accessToken} = ctx.session;

@@ -23,8 +23,8 @@ const {
   SHOPIFY_APP_HOST,
   NODE_ENV,
 } = process.env;
-
-db.query('SELECT NOW()', [], (err, res) => {})
+const queryText = 'INSERT INTO orders_products (order_id, product_id, month, week, created_at) VALUES($1, $2, $3, $4, $5) RETURNING *'
+db.query(queryText, ['00001', 'ppppx', 1, 3, '2019-01-01T00:00:02'])
 /* todo: add any database you want.
 
 const { Pool, Client } = require('pg')
