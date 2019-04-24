@@ -1,8 +1,19 @@
 const ShopifyAPIClient = require("shopify-api-node");
+const functions = require('../functions');
 
 module.exports = (router) => {
   router
-    .get("/api/hello", (ctx, next) => {
+    .get("/customSearch", (ctx, next) => {
+      // remember to add /api and /:shop
+      const startWeek = ctx.query.startWeek
+      const endWeek = ctx.query.endWeek
+      functions.customProductRank(startWeek, endWeek)
+      ctx.response.status = 200
+    })
+    // GET one month 
+    // GET three months 
+    // etc.
+    .get("/hello", (ctx, next) => {
       const {views, shop} = ctx.session;
       var n = views || 0;
       ctx.session.views = ++n;
