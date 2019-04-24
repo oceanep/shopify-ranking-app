@@ -13,6 +13,7 @@ import webpack from "webpack";
 import proxy from "@shopify/koa-shopify-graphql-proxy";
 const ShopifyAPIClient = require("shopify-api-node");
 import webhookVerification from "../middleware/webhookVerification";
+const db = require('../db')
 import appProxy from "../middleware/appProxy";
 dotenv.config();
 
@@ -23,7 +24,32 @@ const {
   NODE_ENV,
 } = process.env;
 
-//todo: add any database you want.
+db.query('SELECT NOW()', [], (err, res) => {})
+/* todo: add any database you want.
+
+const { Pool, Client } = require('pg')
+const connectionString = 'postgresql://dbuser:secretpassword@database.server.com:3211/mydb'
+
+const pool = new Pool({
+  connectionString: connectionString,
+})
+
+pool.query('SELECT NOW()', (err, res) => {
+  console.log(err, res)
+  pool.end()
+})
+
+const client = new Client({
+  connectionString: connectionString,
+})
+client.connect()
+
+client.query('SELECT NOW()', (err, res) => {
+  console.log(err, res)
+  client.end()
+})
+
+*/
 
 const registerWebhook = function(shopDomain, accessToken, webhook) {
   const shopify = new ShopifyAPIClient({
@@ -59,6 +85,7 @@ app.use(
       "write_themes",
       "read_script_tags",
       "write_script_tags",
+      "read_all_orders"
     ],
     afterAuth(ctx) {
       const {shop, accessToken} = ctx.session;
