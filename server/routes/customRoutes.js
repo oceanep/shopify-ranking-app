@@ -11,6 +11,11 @@ module.exports = (router) => {
       functions.customProductRank(startWeek, endWeek)
       ctx.response.status = 200
     })
+    .get("/buildDatabase", async ctx => {
+      console.log("buildDatabase", ctx.session)
+      const {shop, accessToken} = ctx.session;
+      // functions.buildDatabase(shop, accessToken)
+    })
     // GET one month 
     // GET three months 
     // etc.
@@ -22,7 +27,7 @@ module.exports = (router) => {
       else ctx.body = "You've visited this " + shop + " " + n + " times!";
       const values = ['00001', 'ppppx', 1, 3, '2019-01-01T00:00:02']
       const queryText = 'INSERT INTO orders_products(order_id, product_id, month, week, created_at) VALUES($1, $2, $3, $4, $5)'
-      db.query(queryText, ['00001', 'ppppx', 1, 3, '2019-01-01T00:00:02'], () => {console.log("here")})
+      await db.query(queryText, ['00001', 'ppppx', 1, 3, '2019-01-01T00:00:02'], () => {console.log("here")})
     })
     .get("/api/installation", (ctx, next) => {
       const {shop, accessToken} = ctx.session;

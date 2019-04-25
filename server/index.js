@@ -14,17 +14,19 @@ import proxy from "@shopify/koa-shopify-graphql-proxy";
 const ShopifyAPIClient = require("shopify-api-node");
 import webhookVerification from "../middleware/webhookVerification";
 const db = require('../db')
+const functions = require('./functions');
 import appProxy from "../middleware/appProxy";
 dotenv.config();
 
 const {
   SHOPIFY_SECRET,
   SHOPIFY_API_KEY,
-  SHOPIFY_APP_HOST,
-  NODE_ENV,
+  NODE_ENV
 } = process.env;
-const queryText = 'INSERT INTO orders_products (order_id, product_id, month, week, created_at) VALUES($1, $2, $3, $4, $5) RETURNING *'
-db.query(queryText, ['00001', 'ppppx', 1, 3, '2019-01-01T00:00:02'])
+console.log("env variable", SHOPIFY_API_KEY, SHOPIFY_SECRET)
+// const queryText = 'INSERT INTO orders_products (order_id, product_id, month, week, created_at) VALUES($1, $2, $3, $4, $5) RETURNING *'
+// db.query(queryText, ['00001', 'ppppx', 1, 3, '2019-01-01T00:00:02'])
+
 /* todo: add any database you want.
 
 const { Pool, Client } = require('pg')
@@ -75,6 +77,7 @@ app.keys = [SHOPIFY_SECRET];
 app.use(session(app));
 app.use(bodyParser());
 const router = Router();
+console.log(SHOPIFY_API_KEY)
 app.use(
   shopifyAuth({
     apiKey: SHOPIFY_API_KEY,
@@ -89,20 +92,16 @@ app.use(
     ],
     afterAuth(ctx) {
       const {shop, accessToken} = ctx.session;
-      registerWebhook(shop, accessToken, {
-        topic: "themes/create",
-        address: `${SHOPIFY_APP_HOST}/webhooks/themes/create`,
-        format: "json",
-      });
-      registerWebhook(shop, accessToken, {
-        topic: "themes/delete",
-        address: `${SHOPIFY_APP_HOST}/webhooks/themes/delete`,
-        format: "json",
-      });
+      console.log("AFTER AUTH", shop, accessToken)
       ctx.redirect("/");
     },
   }),
 );
+app.use((ctx) => {
+  const {shop, accessToken} = ctx.session;
+  functions.buildDatabase(shop, accessToken) // undefined undefined
+})
+
 app.use(serve(__dirname + "/public"));
 if (isDev) {
   const config = require("../webpack.config.js");
@@ -138,4 +137,7 @@ app.use(async (ctx, next) => {
     });
   }
 });
+
+
+
 export default app;
