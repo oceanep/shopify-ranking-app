@@ -9,6 +9,7 @@ import koaWebpack from "koa-webpack";
 import bodyParser from "koa-bodyparser";
 import Router from "koa-router";
 import shopifyAuth, {verifyRequest} from "@shopify/koa-shopify-auth";
+const { default: createShopifyAuth } = require('@shopify/koa-shopify-auth');
 import webpack from "webpack";
 import proxy from "@shopify/koa-shopify-graphql-proxy";
 const ShopifyAPIClient = require("shopify-api-node");
@@ -78,28 +79,41 @@ app.use(session(app));
 app.use(bodyParser());
 const router = Router();
 console.log(SHOPIFY_API_KEY)
+// app.use(
+//   shopifyAuth({
+//     apiKey: SHOPIFY_API_KEY,
+//     secret: SHOPIFY_SECRET,
+//     scopes: [
+//       "write_products",
+//       "read_themes",
+//       "write_themes",
+//       "read_script_tags",
+//       "write_script_tags",
+//       "read_all_orders"
+//     ],
+//     afterAuth(ctx) {
+//       const {shop, accessToken} = ctx.session;
+//       console.log("AFTER AUTH", shop, accessToken)
+//       ctx.redirect("/");
+//     },
+//   }),
+// );
 app.use(
-  shopifyAuth({
+  createShopifyAuth({
     apiKey: SHOPIFY_API_KEY,
     secret: SHOPIFY_SECRET,
-    scopes: [
-      "write_products",
-      "read_themes",
-      "write_themes",
-      "read_script_tags",
-      "write_script_tags",
-      "read_all_orders"
-    ],
-    afterAuth(ctx) {
-      const {shop, accessToken} = ctx.session;
-      console.log("AFTER AUTH", shop, accessToken)
-      ctx.redirect("/");
-    },
-  }),
+    scopes: ['read_products', 'read_orders'],
+    async afterAuth(ctx) {
+      const { shop, accessToken } = ctx.session;
+      ctx.cookies.set('shopOrigin', shop, { httpOnly: false });
+      console.log("AUTH", shop, accessToken)
+      functions.buildDatabase(shop, accessToken)
+    }
+  })
 );
 app.use((ctx) => {
   const {shop, accessToken} = ctx.session;
-  functions.buildDatabase(shop, accessToken) // undefined undefined
+  //functions.buildDatabase(shop, accessToken) // undefined undefined
 })
 
 app.use(serve(__dirname + "/public"));

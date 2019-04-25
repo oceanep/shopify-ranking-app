@@ -6,18 +6,21 @@ module.exports = (router) => {
   router
     .get("/customSearch", (ctx, next) => {
       // remember to add /api and /:shop
+      // SQL query
       const startWeek = ctx.query.startWeek
       const endWeek = ctx.query.endWeek
       functions.customProductRank(startWeek, endWeek)
       ctx.response.status = 200
     })
     .get("/buildDatabase", async ctx => {
-      console.log("buildDatabase", ctx.session)
+      // console.log("buildDatabase", ctx.session)
       const {shop, accessToken} = ctx.session;
+      console.log(shop, accessToken)
+      ctx.response.status = 200
       // functions.buildDatabase(shop, accessToken)
     })
-    // GET one month 
-    // GET three months 
+    // GET one month -> SQL query 
+    // GET three months -> SQL query 
     // etc.
     .get("/hello", async (ctx, next) => {
       const {views, shop} = ctx.session;
