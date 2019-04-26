@@ -19,9 +19,9 @@ module.exports = (router) => {
       ctx.response.status = 200
       // functions.buildDatabase(shop, accessToken)
     })
+    // need to figure out how to query the database for custom search, one month, three months, etc.
     // GET one month -> SQL query 
     // GET three months -> SQL query 
-    // etc.
     .get("/hello", async (ctx, next) => {
       const {views, shop} = ctx.session;
       var n = views || 0;
