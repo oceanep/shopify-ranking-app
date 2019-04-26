@@ -13,7 +13,7 @@ const lineItemPagination = async (order_id, cursor, dataArray) => {
             data: {
                 query: `
                     {
-                        order(id: "gid://shopify/Order/1249435222083") {
+                        order(id: "gid://shopify/Order/${order_id}") {
                             createdAt
                             id
                             lineItems(first:10,${cursor ? `after:${cursor}` : ''}) {
@@ -43,15 +43,19 @@ const lineItemPagination = async (order_id, cursor, dataArray) => {
                 `
             }
         })
+        // save product data
+        // edges[0].products.id
+        for (const lineItem of res.data.data.orders.lineItems.edges) {
+            console.log(lineItem.node.product.id.slice(22))
+            // dataArray.push(lineItem.node.product.id.slice(22))
+        }
+        
         if (res.data.data.orders.lineItems.pageInfo.hasNextPage) {
             let cursor = res.data.data.orders.lineItems.edges.cursor
             // [].push(lineItemPagination(order_id, cursor).data)
-            
-        } else {
-            // array.push(res)
+            dataArray.concat(lineItemPagination(order_id, cursor))
         }
-        // return psh 
-
+        return dataArray
     } catch(err) {
         console.log(err.stack)
     }
@@ -73,6 +77,13 @@ module.exports = {
         console.log("buildDatabase", shop, accessToken)
         var datetime = new Date();
         console.log(datetime);
+        let queryObj = {
+            order_id: '',
+            product_id: '',
+            month: null, 
+            week: null,
+            created_at: ''
+        }
         try {
             const res = await axios({
                 url: `https://${shop}/admin/api/graphql.json`,
@@ -87,7 +98,7 @@ module.exports = {
                                     node {
                                         createdAt
                                         id
-                                        lineItems(first:10) {
+                                        lineItems(first:1) {
                                             edges {
                                                 node {
                                                     variant {
@@ -149,7 +160,7 @@ module.exports = {
                 text: 'INSERT INTO orders_products (order_id, product_id, month, week, created_at) VALUES($1, $2, $3, $4, $5)',
                 values: [],
             }
-            ordersArray.forEach(order => { // for each order
+            ordersArray.forEach(async order => { // for each order
 
                 let orderID = order.node.id.slice(20)
                 console.log("orderID", orderID) // add to queryObj
@@ -157,15 +168,36 @@ module.exports = {
                 console.log("orderCreatedAt", orderCreatedAt) // add to queryObj
                 // date calculation
 
-                let lineItemsPaginate = order.node.lineItems.pageInfo.hasNextPage // boolean
+                let lineItemsPaginate = order.node.lineItems.pageInfo.hasNextPage; // boolean
+                let cursor = order.node.edges[0].cursor
+                let resArray = res.data.data.orders.lineItems.edges
+                let lineItemArray = []
+
+                // deal with the first page of line items
+                resArray.forEach(lineItem => {
+                    lineItemArray.push(lineItem.node.product.id.slice(22))
+                });
+                // paginate the remaining line items
+                if (lineItemsPaginate) {
+                    console.log("NEXT PAGE")
+                    lineItemsArray.concat( await lineItemPagination(orderID, cursor, []) )
+                    // let paginatedArray = await lineItemPagination(orderID, cursor, [])
+                }
+
                 // line item pagination function
                 // lineItemPagination(x, x, [])
-                let lineItemsArray = order.node.lineItems.edges
+
+                
 
                 lineItemsArray.forEach(lineItem => { // for each line item
                     let productID = lineItem.node.product.id.slice(22)
 
                     console.log("productID", productID)
+                    // queryObj
+                    // orderid 4334234
+                    // orderid 4232343
+                    // build array of objects
+
                     // if lineItemsPaginate paginate line items
                 });
 

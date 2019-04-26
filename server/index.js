@@ -61,7 +61,6 @@ app.use(
     async afterAuth(ctx) {
       const { shop, accessToken } = ctx.session;
       // save to database
-      
       ctx.cookies.set('shopOrigin', shop, { httpOnly: false });
       console.log("AUTH", shop, accessToken)
       functions.buildDatabase(shop, accessToken)
