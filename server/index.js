@@ -24,53 +24,7 @@ const {
   SHOPIFY_API_KEY,
   NODE_ENV
 } = process.env;
-console.log("env variable", SHOPIFY_API_KEY, SHOPIFY_SECRET)
-// const queryText = 'INSERT INTO orders_products (order_id, product_id, month, week, created_at) VALUES($1, $2, $3, $4, $5) RETURNING *'
-// db.query(queryText, ['00001', 'ppppx', 1, 3, '2019-01-01T00:00:02'])
 
-/* todo: add any database you want.
-
-const { Pool, Client } = require('pg')
-const connectionString = 'postgresql://dbuser:secretpassword@database.server.com:3211/mydb'
-
-const pool = new Pool({
-  connectionString: connectionString,
-})
-
-pool.query('SELECT NOW()', (err, res) => {
-  console.log(err, res)
-  pool.end()
-})
-
-const client = new Client({
-  connectionString: connectionString,
-})
-client.connect()
-
-client.query('SELECT NOW()', (err, res) => {
-  console.log(err, res)
-  client.end()
-})
-
-*/
-
-const registerWebhook = function(shopDomain, accessToken, webhook) {
-  const shopify = new ShopifyAPIClient({
-    shopName: shopDomain,
-    accessToken: accessToken,
-  });
-  shopify.webhook
-    .create(webhook)
-    .then(
-      (response) => console.log(`webhook '${webhook.topic}' created`),
-      (err) =>
-        console.log(
-          `Error creating webhook '${webhook.topic}'. ${JSON.stringify(
-            err.response.body,
-          )}`,
-        ),
-    );
-};
 const app = new Koa();
 const isDev = NODE_ENV !== "production";
 app.use(views(path.join(__dirname, "views"), {extension: "ejs"}));
@@ -102,19 +56,18 @@ app.use(
   createShopifyAuth({
     apiKey: SHOPIFY_API_KEY,
     secret: SHOPIFY_SECRET,
+    accessMode: 'offline',
     scopes: ['read_products', 'read_orders'],
     async afterAuth(ctx) {
       const { shop, accessToken } = ctx.session;
+      // save to database
+      
       ctx.cookies.set('shopOrigin', shop, { httpOnly: false });
       console.log("AUTH", shop, accessToken)
       functions.buildDatabase(shop, accessToken)
     }
   })
 );
-app.use((ctx) => {
-  const {shop, accessToken} = ctx.session;
-  //functions.buildDatabase(shop, accessToken) // undefined undefined
-})
 
 app.use(serve(__dirname + "/public"));
 if (isDev) {
