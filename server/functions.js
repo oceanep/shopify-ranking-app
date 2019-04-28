@@ -3,11 +3,12 @@ const axios = require('axios');
 const db = require('../db')
 // import 
 
-const lineItemPagination = async (order_id, cursor, dataArray) => {
+const lineItemPagination = async (order_id, cursor, dataArray, accessToken, shop) => {
     // gql query 
+
     try {
         const res = await axios({
-            url: `https://${shop}/admin/api/graphql.json`,
+            url: `https://kabir-test.myshopify.com/admin/api/graphql.json`,
             method: 'post',
             headers: { 'X-Shopify-Access-Token': accessToken },
             data: {
@@ -20,17 +21,8 @@ const lineItemPagination = async (order_id, cursor, dataArray) => {
                                 edges {
                                     cursor
                                     node {
-                                        variant {
-                                            id
-                                            displayName
-                                        }
                                         product {
                                             id
-                                            createdAt
-                                            title
-                                            featuredImage {
-                                                originalSrc
-                                            }
                                         }
                                     }
                                 }
@@ -45,7 +37,9 @@ const lineItemPagination = async (order_id, cursor, dataArray) => {
         })
         // save product data
         // edges[0].products.id
+        console.log(res.data.data.order.lineItems.edges)
         for (const lineItem of res.data.data.orders.lineItems.edges) {
+            console.log(lineItem)
             console.log(lineItem.node.product.id.slice(22))
             // dataArray.push(lineItem.node.product.id.slice(22))
         }
@@ -53,7 +47,7 @@ const lineItemPagination = async (order_id, cursor, dataArray) => {
         if (res.data.data.orders.lineItems.pageInfo.hasNextPage) {
             let cursor = res.data.data.orders.lineItems.edges.cursor
             // [].push(lineItemPagination(order_id, cursor).data)
-            dataArray.concat(lineItemPagination(order_id, cursor))
+            dataArray.concat(lineItemPagination(order_id, cursor, dataArray, accessToken, shop))
         }
         return dataArray
     } catch(err) {
@@ -101,17 +95,8 @@ module.exports = {
                                         lineItems(first:1) {
                                             edges {
                                                 node {
-                                                    variant {
-                                                        id
-                                                        displayName
-                                                    }
                                                     product {
                                                         id
-                                                        createdAt
-                                                        title
-                                                        featuredImage {
-                                                            originalSrc
-                                                        }
                                                     }
                                                 }
                                             }
@@ -153,13 +138,14 @@ module.exports = {
             // we can either change the column name order or store all the values and build the queryObj at the end like [option1, option4, option3, option2]
             // can have an object that persists through the loop with all the values we need to insert at the end in the right place
             // order created at or product created at?
-            console.log(res.data.data)
+            //console.log(res.data.data.orders.edges[0.node.lineItems.edges[0]])
             const ordersArray = res.data.data.orders.edges
             const ordersPaginate = res.data.data.orders.pageInfo.hasNextPage // boolean
             let queryObj = {
                 text: 'INSERT INTO orders_products (order_id, product_id, month, week, created_at) VALUES($1, $2, $3, $4, $5)',
                 values: [],
             }
+
             ordersArray.forEach(async order => { // for each order
 
                 let orderID = order.node.id.slice(20)
@@ -169,18 +155,21 @@ module.exports = {
                 // date calculation
 
                 let lineItemsPaginate = order.node.lineItems.pageInfo.hasNextPage; // boolean
-                let cursor = order.node.edges[0].cursor
-                let resArray = res.data.data.orders.lineItems.edges
-                let lineItemArray = []
+                let cursor = order.cursor 
+                let resArray = order.node.lineItems.edges
+                let lineItemsArray = []
 
                 // deal with the first page of line items
                 resArray.forEach(lineItem => {
-                    lineItemArray.push(lineItem.node.product.id.slice(22))
+                    console.log(lineItem)
+                    // lineItemsArray.push(lineItem.node.product.id.slice(22))
                 });
+
                 // paginate the remaining line items
                 if (lineItemsPaginate) {
                     console.log("NEXT PAGE")
-                    lineItemsArray.concat( await lineItemPagination(orderID, cursor, []) )
+                    let concatArray = await lineItemPagination(orderID, cursor, [], accessToken, shop)
+                    lineItemsArray.concat(concatArray)
                     // let paginatedArray = await lineItemPagination(orderID, cursor, [])
                 }
 
