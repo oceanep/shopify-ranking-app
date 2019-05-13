@@ -7,15 +7,16 @@ const sleep = (milliseconds) => {
   return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
 
-const monthCalc = async (created_at) => { // created at is compare month
+const monthCalc = (created_at) => { // created at is target month
     // strip created_at '2019-01-01T00:00:02'
-    let compareMonth = parseInt(created_at.slice(5, 8))
-    let compareYear = parseInt(created_at.slice(0, 5))
-    console.log("COMPARE", compareMonth, compareYear)
-    if (compareYear !== 2019) {
-        return (12 - compareMonth) * (compareYear - 2019) + compareMonth
+    let targetMonth = parseInt(created_at.slice(5, 8))
+    let targetYear = parseInt(created_at.slice(0, 5))
+    console.log("target", targetMonth, targetYear)
+    if (targetYear !== 2019) {
+      //(13 - start month) * year difference + targetMonth
+        return 12 * (targetYear - 2019) + targetMonth
     } else {
-        return compareMonth - 1 // 0 for January
+        return targetMonth  // 1 for January
     }
 }
 
@@ -23,7 +24,7 @@ const weekCalc = (created_at) => {
     let minutes = parseInt(created_at.slice(14, 16))
     let hours = parseInt(created_at.slice(12, 14))
     let day = parseInt(created_at.slice(8, 10))
-    //js Date object counts months from 0
+    //js Date object counts months from 0 so subtract 1
     let month = parseInt(created_at.slice(6, 8)) - 1
     let year = parseInt(created_at.slice(0, 5))
     let origin = new Date(Date.UTC(2019, 0, 1))
@@ -39,6 +40,8 @@ const weekCalc = (created_at) => {
     console.log(`
         Days since origin: ${days}, Weeks since origin: ${weeks}
       `)
+
+    return weeks
 
 }
 
@@ -174,28 +177,39 @@ module.exports = {
         // need to have the "created at" for the next day's query be the time the last query started
         // save the current time on query
         console.log("buildDatabase", shop, accessToken)
-        var datetime = new Date();
-        console.log(datetime);
-        let queryObj = {
-            order_id: '',
-            product_id: '',
-            month: null,
-            week: null,
-            created_at: ''
+        var datetime = new Date()
+        console.log(datetime)
+        let queryArr = []
+        let counter = 0
+
+        const productQueryBuilder = (products, orderID, month, week, createdAt) => {
+
+          let tempArr = []
+          products.forEach(product => { // for each line item
+
+              console.log(`NESTED PRODUCT IDS ${product}\n`)
+
+              // push all info in object to tempArr
+              tempArr.push({
+                orderId: orderID,
+                productId: product,
+                month: month,
+                week: week,
+                createdAt: createdAt
+              })
+
+              counter++
+
+          })
+
+          return tempArr
         }
+
         try {
             const ordersArray = await ordersQuery(shop, accessToken)
             console.log('\nCompleted orders array', ordersArray)
-            // await buildDatabase(res.data)
-            // console.log(res.data.data.orders.edges) // array of elements that contain node property
+
             /*
-            console.log(res.data.data.orders.pageInfo) // { hasNextPage: true }
-            console.log(res.data.data.orders.edges[0].node.id) // gid://shopify/Order/1249435222083
-            console.log(res.data.data.orders.edges[0].node.createdAt) // 2019-04-18T03:25:48Z
-
-            console.log(res.data.data.orders.edges[0].node.lineItems.pageInfo) // { hasNextPage: false }
-            console.log(res.data.data.orders.edges[0].node.lineItems.edges[0].node.product.id) // 'gid://shopify/Product/2112769884227'
-
             order_id, product_id, month, week, order_created_at
             10000000, 1111111111,     1,    2,
             10000000, 2222222222,     1,    2, 2019-01-10T03:25:48Z
@@ -216,16 +230,19 @@ module.exports = {
             //     text: 'INSERT INTO orders_products (order_id, product_id, month, week, created_at) VALUES($1, $2, $3, $4, $5)',
             //     values: [],
             // }
-
             ordersArray.forEach(async order => { // for each order
 
+                let tempArr = []
                 console.log("\nORDER START")
                 let orderID = order.node.id.slice(20)
                 console.log("orderID", orderID) // add to queryObj
                 let orderCreatedAt = order.node.createdAt
                 console.log("orderCreatedAt", orderCreatedAt) // add to queryObj
                 // date calculation
-                weekCalc(orderCreatedAt)
+                let month = monthCalc(orderCreatedAt)
+                let week = weekCalc(orderCreatedAt)
+
+                console.log(`MONTH: ${month} WEEK: ${week}`)
 
                 let lineItemsPaginate = order.node.lineItems.pageInfo.hasNextPage; // boolean
                 let cursor = order.cursor
@@ -247,39 +264,28 @@ module.exports = {
                 if (lineItemsPaginate) {
                     console.log(`NEXT PAGE ${lineItemsPaginate}`)
                     console.log(`lineItem next page cursor ${lineItemCursor}`)
-                    let concatArray = await lineItemPagination(orderID, lineItemCursor, [], accessToken, shop)
-                    lineItemsArray = lineItemsArray.concat(concatArray)
-                    console.log("paginated line items ", )
-                    // let paginatedArray = await lineItemPagination(orderID, cursor, [])
-                    lineItemsArray.forEach(lineItem => { // for each line item
+                    lineItemsArray = lineItemsArray.concat(await lineItemPagination(orderID, lineItemCursor, [], accessToken, shop))
+                    console.log("paginated line items ", lineItemsArray)
 
-                        console.log(`NESTED PRODUCT IDS ${lineItem}
-                          `)
-                        // queryObj
-                        // orderid 4334234
-                        // orderid 4232343
-                        // build array of objects
+                    tempArr = productQueryBuilder(lineItemsArray, orderID, month, week, orderCreatedAt)
+                    queryArr = queryArr.concat(tempArr)
+                    console.log("Building Qeury Array...", queryArr)
 
-                        // if lineItemsPaginate paginate line items
-                    });
+
                 } else {
 
-                  lineItemsArray.forEach(lineItem => { // for each line item
-                      let productID = lineItem
+                  // if pushing to tempArr in if, else then multiple {} in one []
+                  tempArr = productQueryBuilder(lineItemsArray, orderID, month, week, orderCreatedAt)
+                  queryArr = queryArr.concat(tempArr)
+                  console.log("Building Qeury Array...", queryArr)
 
-                      console.log(`PRODUCT ID ${productID}
-                        `)
-                      // queryObj
-                      // orderid 4334234
-                      // orderid 4232343
-                      // build array of objects
-
-                      // if lineItemsPaginate paginate line items
-                  });
                 }
+
 
                 console.log("ORDER FINISHED")
             });
+
+            console.log("\nFULL QUERY ARRAY", counter, queryArr)
 
         } catch(err) {
             console.log(err.stack)
