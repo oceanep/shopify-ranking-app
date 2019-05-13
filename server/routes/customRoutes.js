@@ -20,12 +20,15 @@ module.exports = (router) => {
       const body = JSON.parse(ctx.request.body)
       const {startDate, endDate, type} = body
       console.log("startDate, endDate, type", startDate, endDate, type)
-      
-      // query using the params we got 
+
+      // query using the params we got
+      db.query(`SELECT * FROM orders_products WHERE ${type} BETWEEN ${startDate} AND ${endDate}`) 
       // do stuff 
       // send back ranking (in order) product ids
 
-      // ctx.response.status = 200
+      ctx.body = {
+        "sorted_ranked_product_ids": ["10293020", "11838929", "19392929"]
+      }
     })
     // need to figure out how to query the database for custom search, one month, three months, etc.
     // GET one month -> SQL query 
