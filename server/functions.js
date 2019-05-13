@@ -7,6 +7,41 @@ const sleep = (milliseconds) => {
   return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
 
+const monthCalc = async (created_at) => { // created at is compare month
+    // strip created_at '2019-01-01T00:00:02'
+    let compareMonth = parseInt(created_at.slice(5, 8))
+    let compareYear = parseInt(created_at.slice(0, 5))
+    console.log("COMPARE", compareMonth, compareYear)
+    if (compareYear !== 2019) {
+        return (12 - compareMonth) * (compareYear - 2019) + compareMonth
+    } else {
+        return compareMonth - 1 // 0 for January
+    }
+}
+
+const weekCalc = (created_at) => {
+    let minutes = parseInt(created_at.slice(14, 16))
+    let hours = parseInt(created_at.slice(12, 14))
+    let day = parseInt(created_at.slice(8, 10))
+    //js Date object counts months from 0
+    let month = parseInt(created_at.slice(6, 8)) - 1
+    let year = parseInt(created_at.slice(0, 5))
+    let origin = new Date(Date.UTC(2019, 0, 1))
+    let target = new Date(Date.UTC(year, month, day, hours, minutes))
+    let diff = target - origin
+    let oneDay = 1000 * 60 * 60 * 24
+    //2 day offset to calculate for January 1st 2019 being on a Tuesday, 1 to offset for current day
+    let days = Math.floor(diff / oneDay) + 3
+
+    let weeks = Math.ceil(parseFloat(days/7))
+    console.log('Origin date: ', origin)
+    console.log('target year, month, day, hours, minutes: ', year, month, day, hours, minutes)
+    console.log(`
+        Days since origin: ${days}, Weeks since origin: ${weeks}
+      `)
+
+}
+
 const lineItemPagination = async (order_id, cursor, dataArray, accessToken, shop) => {
     // gql query
     console.log(`query variables: order id ${order_id}, line item cursor ${cursor}`)
@@ -190,6 +225,7 @@ module.exports = {
                 let orderCreatedAt = order.node.createdAt
                 console.log("orderCreatedAt", orderCreatedAt) // add to queryObj
                 // date calculation
+                weekCalc(orderCreatedAt)
 
                 let lineItemsPaginate = order.node.lineItems.pageInfo.hasNextPage; // boolean
                 let cursor = order.cursor
