@@ -17,6 +17,8 @@ import webhookVerification from "../middleware/webhookVerification";
 const db = require('../db')
 const functions = require('./functions');
 import appProxy from "../middleware/appProxy";
+const cron = require('node-cron');
+const koaBody = require('koa-body');
 dotenv.config();
 
 const {
@@ -30,7 +32,7 @@ const isDev = NODE_ENV !== "production";
 app.use(views(path.join(__dirname, "views"), {extension: "ejs"}));
 app.keys = [SHOPIFY_SECRET];
 app.use(session(app));
-app.use(bodyParser());
+app.use(bodyParser()); // changed
 const router = Router();
 console.log(SHOPIFY_API_KEY)
 // app.use(
@@ -63,7 +65,18 @@ app.use(
       // save to database
       ctx.cookies.set('shopOrigin', shop, { httpOnly: false });
       console.log("AUTH", shop, accessToken)
-      functions.buildDatabase(shop, accessToken)
+      
+      // need to move this code 
+      let date = new Date()
+      let dateString = date.toUTCString()
+      console.log(dateString)
+      cron.schedule('0 */12 * * *', (dateString) => {
+        console.log('running cron job');
+        // functions.buildDatabase(shop, accessToken, dateString)
+      });
+      functions.buildDatabase(shop, accessToken, dateString)
+      // end 
+
     }
   })
 );

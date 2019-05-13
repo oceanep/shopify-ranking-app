@@ -1,6 +1,8 @@
 const ShopifyAPIClient = require("shopify-api-node");
 const functions = require('../functions');
 const db = require('../../db')
+const router = require('koa-router')();
+const koaBody = require('koa-body');
 
 module.exports = (router) => {
   router
@@ -12,12 +14,18 @@ module.exports = (router) => {
       functions.customProductRank(startWeek, endWeek)
       ctx.response.status = 200
     })
-    .get("/buildDatabase", async ctx => {
-      // console.log("buildDatabase", ctx.session)
-      const {shop, accessToken} = ctx.session;
-      console.log(shop, accessToken)
-      ctx.response.status = 200
-      // functions.buildDatabase(shop, accessToken)
+    .post("/rankProducts", koaBody(), async ctx => { // need to add api for the shopify auth call
+      // const {shop, accessToken} = ctx.session;
+      console.log(ctx.request.body)
+      const body = JSON.parse(ctx.request.body)
+      const {startDate, endDate, type} = body
+      console.log("startDate, endDate, type", startDate, endDate, type)
+      
+      // query using the params we got 
+      // do stuff 
+      // send back ranking (in order) product ids
+
+      // ctx.response.status = 200
     })
     // need to figure out how to query the database for custom search, one month, three months, etc.
     // GET one month -> SQL query 

@@ -103,7 +103,9 @@ const lineItemPagination = async (order_id, cursor, dataArray, accessToken, shop
 
 }
 
-const ordersQuery = async (shop, accessToken, cursor='') => {
+// 2018-01-01T00:00:01
+
+const ordersQuery = async (shop, accessToken, lastSyncDate, cursor='') => {
   console.log('\nTrying orders Query')
   try {
     let res = await axios({
@@ -113,7 +115,7 @@ const ordersQuery = async (shop, accessToken, cursor='') => {
         data: {
             query: `
                 {
-                    orders(first:10, ${cursor ? `after:"${cursor}",` : ''} query:"created_at:>#{2018-01-01T00:00:01}") {
+                    orders(first:10, ${cursor ? `after:"${cursor}",` : ''} query:"created_at:>#{${lastSyncDate}}") {
                         edges {
                         cursor
                             node {
@@ -156,7 +158,7 @@ const ordersQuery = async (shop, accessToken, cursor='') => {
       console.log("SLEPT")
     }
 
-    if (ordersPaginate) {ordersArray.concat(await ordersQuery(shop, accessToken, ordersCursor))}
+    if (ordersPaginate) {ordersArray.concat(await ordersQuery(shop, accessToken, lastSyncDate, ordersCursor))}
 
     return ordersArray
 
@@ -166,47 +168,59 @@ const ordersQuery = async (shop, accessToken, cursor='') => {
 
 }
 
+const productQueryBuilder = (products, orderID, month, week, createdAt) => {
+
+    let tempArr = []
+    products.forEach(product => { // for each line item
+
+        console.log(`NESTED PRODUCT IDS ${product}\n`)
+
+        // push all info in object to tempArr
+        tempArr.push({
+          orderId: orderID,
+          productId: product,
+          month: month,
+          week: week,
+          createdAt: createdAt
+        })
+
+        let queryObj = {
+            orderId: orderID,
+            productId: product,
+            month: month,
+            week: week,
+            createdAt: createdAt
+        }
+
+        console.log(queryObj)
+
+        // make database call 
+        console.log("db.query")
+        const queryText = 'INSERT INTO orders_products (order_id, product_id, month, week, created_at) VALUES($1, $2, $3, $4, $5) RETURNING *'
+        db.query(queryText, [orderID, product, month, week, createdAt])
+
+    })
+
+    // return tempArr
+  }
+
+
 module.exports = {
 
     customProductRank: (start, end) => {
         console.log("custom product rank", start, end)
         // query database directly
     },
-    buildDatabase: async (shop, accessToken) => {
+    buildDatabase: async (shop, accessToken, lastSyncDate) => {
         // might need to add a cursor argument for pagination
         // need to have the "created at" for the next day's query be the time the last query started
         // save the current time on query
-        console.log("buildDatabase", shop, accessToken)
-        var datetime = new Date()
-        console.log(datetime)
+        console.log("buildDatabase", shop, accessToken, lastSyncDate)
         let queryArr = []
         let counter = 0
 
-        const productQueryBuilder = (products, orderID, month, week, createdAt) => {
-
-          let tempArr = []
-          products.forEach(product => { // for each line item
-
-              console.log(`NESTED PRODUCT IDS ${product}\n`)
-
-              // push all info in object to tempArr
-              tempArr.push({
-                orderId: orderID,
-                productId: product,
-                month: month,
-                week: week,
-                createdAt: createdAt
-              })
-
-              counter++
-
-          })
-
-          return tempArr
-        }
-
         try {
-            const ordersArray = await ordersQuery(shop, accessToken)
+            const ordersArray = await ordersQuery(shop, accessToken, lastSyncDate)
             console.log('\nCompleted orders array', ordersArray)
 
             /*
@@ -282,15 +296,18 @@ module.exports = {
                 }
 
 
-                console.log("ORDER FINISHED")
+                console.log("ORDER FINISHED") // pass something here
+                
             });
 
-            console.log("\nFULL QUERY ARRAY", counter, queryArr)
+            console.log("\nFULL QUERY ARRAY", queryArr)
 
         } catch(err) {
             console.log(err.stack)
         }
+        console.log("\nFULL QUERY ARRAY", queryArr)
     }
+
 }
 // .then(result => {
 //             let { customers } = result.data.data;
