@@ -21,20 +21,20 @@ const monthCalc = (created_at) => { // created at is target month
 }
 
 const weekCalc = (created_at) => {
-    let minutes = parseInt(created_at.slice(14, 16))
-    let hours = parseInt(created_at.slice(12, 14))
-    let day = parseInt(created_at.slice(8, 10))
-    //js Date object counts months from 0 so subtract 1
-    let month = parseInt(created_at.slice(6, 8)) - 1
-    let year = parseInt(created_at.slice(0, 5))
-    let origin = new Date(Date.UTC(2019, 0, 1))
-    let target = new Date(Date.UTC(year, month, day, hours, minutes))
-    let diff = target - origin
-    let oneDay = 1000 * 60 * 60 * 24
-    //2 day offset to calculate for January 1st 2019 being on a Tuesday, 1 to offset for current day
-    let days = Math.floor(diff / oneDay) + 3
+    let minutes = parseInt(created_at.slice(14, 16)),
+        hours = parseInt(created_at.slice(12, 14)),
+        day = parseInt(created_at.slice(8, 10)),
+        //js Date object counts months from 0 so subtract 1
+        month = parseInt(created_at.slice(6, 8)) - 1,
+        year = parseInt(created_at.slice(0, 5)),
+        origin = new Date(Date.UTC(2019, 0, 1)),
+        target = new Date(Date.UTC(year, month, day, hours, minutes)),
+        diff = target - origin,
+        oneDay = 1000 * 60 * 60 * 24,
+        //2 day offset to calculate for January 1st 2019 being on a Tuesday, 1 to offset for current day
+        days = Math.floor(diff / oneDay) + 3,
+        weeks = Math.ceil(parseFloat(days/7))
 
-    let weeks = Math.ceil(parseFloat(days/7))
     console.log('Origin date: ', origin)
     console.log('target year, month, day, hours, minutes: ', year, month, day, hours, minutes)
     console.log(`
@@ -80,21 +80,15 @@ const lineItemPagination = async (order_id, cursor, dataArray, accessToken, shop
         })
         // save product data
         // edges[0].products.id
+        let nextPage = res.data.data.order.lineItems.pageInfo.hasNextPage
+        let lineItems = res.data.data.order.lineItems.edges
+        let finalIdx = lineItems.length - 1
+        let nextCursor = lineItems[finalIdx].cursor
+
         console.log('\ninside extra item query')
-        for (const lineItem of res.data.data.order.lineItems.edges) {
-            console.log(lineItem)
-            dataArray.push(lineItem.node.product.id.slice(22))
-        }
 
-        if (res.data.data.order.lineItems.pageInfo.hasNextPage) {
-            let finalIdx = res.data.data.order.lineItems.edges.length - 1
-            let nextCursor = res.data.data.order.lineItems.edges[finalIdx].cursor
-            console.log(`lineItems next page, cursor ${nextCursor}`)
+        return dataArray.concat(!nextPage ? lineItems.map( i => i.node.product.id.slice(22)) : await lineItemPagination(order_id, nextCursor, dataArray, accessToken, shop))
 
-            // [].push(lineItemPagination(order_id, cursor).data)
-            dataArray.concat(await lineItemPagination(order_id, nextCursor, dataArray, accessToken, shop))
-        }
-        return dataArray
     } catch(err) {
         console.log(`failed in lineitems check ${err.stack}`)
     }
@@ -194,7 +188,7 @@ const productQueryBuilder = (products, orderID, month, week, createdAt) => {
 
         console.log(queryObj)
 
-        // make database call 
+        // make database call
         console.log("db.query")
         const queryText = 'INSERT INTO orders_products (order_id, product_id, month, week, created_at) VALUES($1, $2, $3, $4, $5) RETURNING *'
         db.query(queryText, [orderID, product, month, week, createdAt])
@@ -244,63 +238,61 @@ module.exports = {
             //     text: 'INSERT INTO orders_products (order_id, product_id, month, week, created_at) VALUES($1, $2, $3, $4, $5)',
             //     values: [],
             // }
-            ordersArray.forEach(async order => { // for each order
 
-                let tempArr = []
-                console.log("\nORDER START")
-                let orderID = order.node.id.slice(20)
-                console.log("orderID", orderID) // add to queryObj
-                let orderCreatedAt = order.node.createdAt
-                console.log("orderCreatedAt", orderCreatedAt) // add to queryObj
-                // date calculation
-                let month = monthCalc(orderCreatedAt)
-                let week = weekCalc(orderCreatedAt)
+            let final = await ordersArray.reduce( async (acc, order) => {
 
-                console.log(`MONTH: ${month} WEEK: ${week}`)
+              let accumulator = await acc
 
-                let lineItemsPaginate = order.node.lineItems.pageInfo.hasNextPage; // boolean
-                let cursor = order.cursor
-                let lineItemCursor = ''
-                let resArray = order.node.lineItems.edges
-                let lineItemsArray = []
+              let tempArr = []
 
-                // deal with the first page of line items
-                resArray.forEach((lineItem, index, array) => {
-                  lineItemsArray.push(lineItem.node.product.id.slice(22))
+              let orderID = order.node.id.slice(20)
+              let orderCreatedAt = order.node.createdAt
+              console.log("\nORDER START")
+              console.log("orderID", orderID) // add to queryObj
+              console.log("orderCreatedAt", orderCreatedAt) // add to queryObj
+              // date calculation
+              let month = monthCalc(orderCreatedAt)
+              let week = weekCalc(orderCreatedAt)
 
-                  if ( index === array.length - 1) {
-                    lineItemCursor = lineItem.cursor
-                    console.log(`pre paginated line items array ${lineItemsArray}`)
-                  }
-                });
+              console.log(`MONTH: ${month} WEEK: ${week}`)
 
-                // paginate the remaining line items
-                if (lineItemsPaginate) {
-                    console.log(`NEXT PAGE ${lineItemsPaginate}`)
-                    console.log(`lineItem next page cursor ${lineItemCursor}`)
-                    lineItemsArray = lineItemsArray.concat(await lineItemPagination(orderID, lineItemCursor, [], accessToken, shop))
-                    console.log("paginated line items ", lineItemsArray)
+              let lineItemsPaginate = order.node.lineItems.pageInfo.hasNextPage; // boolean
+              let cursor = order.cursor
+              let resArray = order.node.lineItems.edges
+              let lineItemCursor = resArray[resArray.length - 1].cursor
 
-                    tempArr = productQueryBuilder(lineItemsArray, orderID, month, week, orderCreatedAt)
-                    queryArr = queryArr.concat(tempArr)
-                    console.log("Building Qeury Array...", queryArr)
+              // deal with the first page of line items
+              let productIdArray = resArray.map((lineItem) => (lineItem.node.product.id.slice(22)))
 
+              console.log(acc)
+              console.log(productIdArray)
 
-                } else {
+              // paginate the remaining line items
+              if (lineItemsPaginate) {
+                  console.log(`NEXT PAGE ${lineItemsPaginate}`)
 
-                  // if pushing to tempArr in if, else then multiple {} in one []
-                  tempArr = productQueryBuilder(lineItemsArray, orderID, month, week, orderCreatedAt)
-                  queryArr = queryArr.concat(tempArr)
-                  console.log("Building Qeury Array...", queryArr)
+                  productIdArray = productIdArray.concat(await lineItemPagination(orderID, lineItemCursor, [], accessToken, shop))
+                  console.log("paginated line items ", productIdArray)
+              }
 
+              let itemsArray = productIdArray.map( product => (
+                {
+                  orderId: orderID,
+                  productId: product,
+                  month: month,
+                  week: week,
+                  createdAt: orderCreatedAt
                 }
+              ))
 
 
-                console.log("ORDER FINISHED") // pass something here
-                
-            });
 
-            console.log("\nFULL QUERY ARRAY", queryArr)
+
+              return accumulator.concat(itemsArray)
+
+            }, [])
+
+            console.log("\nFULL QUERY ARRAY\n", final)
 
         } catch(err) {
             console.log(err.stack)
