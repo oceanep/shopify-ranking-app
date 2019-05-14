@@ -31,7 +31,8 @@ module.exports = {
   query: async (text, params) => {
     try {
       const res = await pool.query(text, params)
-      console.log(res.rows)
+      // console.log(res.rows)
+      return res.rows
     } catch(err) {
       console.log(err.stack)
     }
