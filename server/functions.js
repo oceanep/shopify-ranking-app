@@ -1,57 +1,21 @@
 // import axios to make graphql call
 const axios = require('axios');
 const db = require('../db')
+const moment = require('moment');
 // import
 
 const sleep = (milliseconds) => {
   return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
 
-const monthCalc = (created_at) => { // created at is target month
-    // strip created_at '2019-01-01T00:00:02'
-    let targetMonth = parseInt(created_at.slice(5, 8))
-    let targetYear = parseInt(created_at.slice(0, 5))
-    console.log("target", targetMonth, targetYear)
-    if (targetYear !== 2019) {
-      //(13 - start month) * year difference + targetMonth
-        return 12 * (targetYear - 2019) + targetMonth
-    } else {
-        return targetMonth  // 1 for January
+const getUser = async () => { 
+    try {
+      const shop = await db.query(`SELECT * FROM my_user`);
+      return shop[0]
+    } catch(err) {
+      console.log(err)
     }
-}
-
-const parseDate = (utcDate) => {
-    console.log("utcDate", utcDate)
-    let minutes = parseInt(utcDate.slice(14, 16)),
-        hours = parseInt(utcDate.slice(12, 14)),
-        day = parseInt(utcDate.slice(8, 10)),
-        //js Date object counts months from 0 so subtract 1
-        month = parseInt(utcDate.slice(6, 8)) - 1,
-        year = parseInt(utcDate.slice(0, 5))
-    
-    console.log('target year, month, day, hours, minutes: ', year, month, day, hours, minutes)
-    return new Date(Date.UTC(year, month, day, hours, minutes))
-}
-
-const dayCalc = (origin, target) => {
-
-    let indexOrigin = parseDate(origin),
-        indexTarget = parseDate(target),
-        diff = indexTarget - indexOrigin,
-        oneDay = 1000 * 60 * 60 * 24,
-        // 1 to offset for current day
-        days = Math.floor(diff / oneDay) + 1,
-        weeks = Math.ceil(parseFloat(days/7))
-
-    console.log('Origin date: ', indexOrigin)
-    
-    console.log(`
-        Days since origin: ${days}
-    `)
-
-    return days
-
-}
+  }
 
 const lineItemPagination = async (order_id, cursor, dataArray, accessToken, shop) => {
     // gql query
@@ -250,7 +214,16 @@ module.exports = {
               console.log("orderID", orderID) // add to queryObj
               console.log("orderCreatedAt", orderCreatedAt) // add to queryObj
               // date calculation
-              let days = dayCalc("2019-05-10T03:25:48Z", orderCreatedAt)
+
+              // pull from db to get dayCalc use custom function
+              // turn orderCreatedAt into moment object
+              // let target = moment.utc(orderCreatedAt); // build moment object from shopify created at date
+              let target = await getUser()
+              console.log(target)
+              // console.log("target from order created", target.format())
+              let origin = moment.utc();
+
+              let days = target.diff(origin, 'days') + 1
 
               let lineItemsPaginate = order.node.lineItems.pageInfo.hasNextPage; // boolean
               let cursor = order.cursor

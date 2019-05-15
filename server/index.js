@@ -17,8 +17,11 @@ import webhookVerification from "../middleware/webhookVerification";
 const db = require('../db')
 const functions = require('./functions');
 import appProxy from "../middleware/appProxy";
+import { start } from "repl";
 const cron = require('node-cron');
 const koaBody = require('koa-body');
+const parseDate = require('./parseDate');
+const moment = require('moment');
 dotenv.config();
 
 const {
@@ -35,25 +38,6 @@ app.use(session(app));
 app.use(bodyParser()); // changed
 const router = Router();
 console.log(SHOPIFY_API_KEY)
-// app.use(
-//   shopifyAuth({
-//     apiKey: SHOPIFY_API_KEY,
-//     secret: SHOPIFY_SECRET,
-//     scopes: [
-//       "write_products",
-//       "read_themes",
-//       "write_themes",
-//       "read_script_tags",
-//       "write_script_tags",
-//       "read_all_orders"
-//     ],
-//     afterAuth(ctx) {
-//       const {shop, accessToken} = ctx.session;
-//       console.log("AFTER AUTH", shop, accessToken)
-//       ctx.redirect("/");
-//     },
-//   }),
-// );
 app.use(
   createShopifyAuth({
     apiKey: SHOPIFY_API_KEY,
@@ -61,26 +45,28 @@ app.use(
     accessMode: 'offline',
     scopes: ['read_products', 'read_orders', 'unauthenticated_read_product_listings'],
     async afterAuth(ctx) {
+
       const { shop, accessToken } = ctx.session;
-      // save shop, accessToken, and originDate in table
-      // save to database
+      const existingUser = await db.query('SELECT * FROM my_user')
+      console.log("existingUser", existingUser)
+      
+      if (existingUser.length === 0) {
+        let now = moment.utc(new Date())
+        // need to convert now to UTC
+        // then convert back to use later
+        const queryText = 'INSERT INTO my_user (shop, access_token, origin) VALUES($1, $2, $3) RETURNING *'
+        const insertResult = await db.query(queryText, [shop, accessToken, now])
+        console.log("insertResult", insertResult)
+      } else {
+        // update auth info 
+        const updateResult = await db.query(`UPDATE my_user SET access_token = '${accessToken}';`)
+        console.log("updateResult", updateResult)
+      }
+
       ctx.cookies.set('shopOrigin', shop, { httpOnly: false });
       console.log("AUTH", shop, accessToken)
-      // add origin date
-      // console.log(db.query(`SELECT * FROM user WHERE accessToken = ${accessToken}`))
-      
-      // need to move this code 
-      let date = new Date()
-      let dateString = date.toUTCString()
-      console.log(dateString)
-      cron.schedule('0 */12 * * *', (dateString) => {
-        console.log('running cron job');
-        // functions.buildDatabase(shop, accessToken, dateString)
-        // delete beginning of database
-      });
-      functions.buildDatabase(shop, accessToken, dateString)
-      // end 
-
+      functions.buildDatabase(shop, accessToken, new Date())
+      ctx.redirect("/");
     }
   })
 );
