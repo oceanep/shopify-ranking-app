@@ -59,12 +59,15 @@ app.use(
     apiKey: SHOPIFY_API_KEY,
     secret: SHOPIFY_SECRET,
     accessMode: 'offline',
-    scopes: ['read_products', 'read_orders'],
+    scopes: ['read_products', 'read_orders', 'unauthenticated_read_product_listings'],
     async afterAuth(ctx) {
       const { shop, accessToken } = ctx.session;
+      // save shop, accessToken, and originDate in table
       // save to database
       ctx.cookies.set('shopOrigin', shop, { httpOnly: false });
       console.log("AUTH", shop, accessToken)
+      // add origin date
+      // console.log(db.query(`SELECT * FROM user WHERE accessToken = ${accessToken}`))
       
       // need to move this code 
       let date = new Date()
@@ -73,6 +76,7 @@ app.use(
       cron.schedule('0 */12 * * *', (dateString) => {
         console.log('running cron job');
         // functions.buildDatabase(shop, accessToken, dateString)
+        // delete beginning of database
       });
       functions.buildDatabase(shop, accessToken, dateString)
       // end 

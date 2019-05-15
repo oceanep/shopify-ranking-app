@@ -20,28 +20,36 @@ const monthCalc = (created_at) => { // created at is target month
     }
 }
 
-const weekCalc = (created_at) => {
-    let minutes = parseInt(created_at.slice(14, 16)),
-        hours = parseInt(created_at.slice(12, 14)),
-        day = parseInt(created_at.slice(8, 10)),
+const parseDate = (utcDate) => {
+    console.log("utcDate", utcDate)
+    let minutes = parseInt(utcDate.slice(14, 16)),
+        hours = parseInt(utcDate.slice(12, 14)),
+        day = parseInt(utcDate.slice(8, 10)),
         //js Date object counts months from 0 so subtract 1
-        month = parseInt(created_at.slice(6, 8)) - 1,
-        year = parseInt(created_at.slice(0, 5)),
-        origin = new Date(Date.UTC(2019, 0, 1)),
-        target = new Date(Date.UTC(year, month, day, hours, minutes)),
-        diff = target - origin,
+        month = parseInt(utcDate.slice(6, 8)) - 1,
+        year = parseInt(utcDate.slice(0, 5))
+    
+    console.log('target year, month, day, hours, minutes: ', year, month, day, hours, minutes)
+    return new Date(Date.UTC(year, month, day, hours, minutes))
+}
+
+const dayCalc = (origin, target) => {
+
+    let indexOrigin = parseDate(origin),
+        indexTarget = parseDate(target),
+        diff = indexTarget - indexOrigin,
         oneDay = 1000 * 60 * 60 * 24,
-        //2 day offset to calculate for January 1st 2019 being on a Tuesday, 1 to offset for current day
-        days = Math.floor(diff / oneDay) + 3,
+        // 1 to offset for current day
+        days = Math.floor(diff / oneDay) + 1,
         weeks = Math.ceil(parseFloat(days/7))
 
-    console.log('Origin date: ', origin)
-    console.log('target year, month, day, hours, minutes: ', year, month, day, hours, minutes)
+    console.log('Origin date: ', indexOrigin)
+    
     console.log(`
-        Days since origin: ${days}, Weeks since origin: ${weeks}
-      `)
+        Days since origin: ${days}
+    `)
 
-    return weeks
+    return days
 
 }
 
@@ -109,7 +117,7 @@ const ordersQuery = async (shop, accessToken, lastSyncDate, cursor='') => {
         data: {
             query: `
                 {
-                    orders(first:10, ${cursor ? `after:"${cursor}",` : ''} query:"created_at:>#{${lastSyncDate}}") {
+                    orders(first:10, ${cursor ? `after:"${cursor}",` : ''} query:"created_at:>#{2019-01-01T00:00:01}") {
                         edges {
                         cursor
                             node {
@@ -162,39 +170,32 @@ const ordersQuery = async (shop, accessToken, lastSyncDate, cursor='') => {
 
 }
 
-const productQueryBuilder = (products, orderID, month, week, createdAt) => {
+const productQueryBuilder = (obj) => { // take object products, orderID, month, week, createdAt
 
     let tempArr = []
-    products.forEach(product => { // for each line item
+    console.log("obj", obj)
 
-        console.log(`NESTED PRODUCT IDS ${product}\n`)
+    const {
+        orderId,
+        productId,
+        days,
+        createdAt
+    } = obj
 
-        // push all info in object to tempArr
-        tempArr.push({
-          orderId: orderID,
-          productId: product,
-          month: month,
-          week: week,
-          createdAt: createdAt
-        })
 
-        let queryObj = {
-            orderId: orderID,
-            productId: product,
-            month: month,
-            week: week,
-            createdAt: createdAt
-        }
+    let queryObj = {
+        orderId: orderId,
+        productId: productId,
+        days: days,
+        created_at: createdAt
+    }
 
-        console.log(queryObj)
+    console.log(queryObj)
 
-        // make database call
-        console.log("db.query")
-        const queryText = 'INSERT INTO orders_products (order_id, product_id, month, week, created_at) VALUES($1, $2, $3, $4, $5) RETURNING *'
-        db.query(queryText, [orderID, product, month, week, createdAt])
-
-    })
-
+    // make database call
+    console.log("db.query")
+    const queryText = 'INSERT INTO order_product_data (order_id, product_id, day, created_at) VALUES($1, $2, $3, $4) RETURNING *'
+    db.query(queryText, [orderId, productId, days, createdAt])
     // return tempArr
   }
 
@@ -243,18 +244,13 @@ module.exports = {
 
               let accumulator = await acc
 
-              let tempArr = []
-
               let orderID = order.node.id.slice(20)
               let orderCreatedAt = order.node.createdAt
               console.log("\nORDER START")
               console.log("orderID", orderID) // add to queryObj
               console.log("orderCreatedAt", orderCreatedAt) // add to queryObj
               // date calculation
-              let month = monthCalc(orderCreatedAt)
-              let week = weekCalc(orderCreatedAt)
-
-              console.log(`MONTH: ${month} WEEK: ${week}`)
+              let days = dayCalc("2019-05-10T03:25:48Z", orderCreatedAt)
 
               let lineItemsPaginate = order.node.lineItems.pageInfo.hasNextPage; // boolean
               let cursor = order.cursor
@@ -279,8 +275,7 @@ module.exports = {
                 {
                   orderId: orderID,
                   productId: product,
-                  month: month,
-                  week: week,
+                  days: days,
                   createdAt: orderCreatedAt
                 }
               ))
@@ -293,11 +288,14 @@ module.exports = {
             }, [])
 
             console.log("\nFULL QUERY ARRAY\n", final)
+            final.forEach(element => {
+                productQueryBuilder(element)
+            });
 
         } catch(err) {
             console.log(err.stack)
         }
-        console.log("\nFULL QUERY ARRAY", queryArr)
+
     }
 
 }
