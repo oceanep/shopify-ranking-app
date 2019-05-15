@@ -4,6 +4,23 @@ const db = require('../../db')
 const router = require('koa-router')();
 const koaBody = require('koa-body');
 
+// > const authDetails = await getUser()
+// > console.log(authDetails)
+// { id: 2,
+//   shop: 'kabir-test.myshopify.com',
+//   access_token: '1',
+//   origin: 'Wed, 15 May 2019 09:02:20 GMT' }
+
+const getUser = async () => { 
+  try {
+    const shop = await db.query(`SELECT * FROM my_user`);
+    return shop[0]
+  } catch(err) {
+    console.log(err)
+  }
+}
+
+
 module.exports = (router) => {
   router
     .get("/customSearch", (ctx, next) => {
@@ -15,6 +32,7 @@ module.exports = (router) => {
       ctx.response.status = 200
     })
     .post("/rankProducts", koaBody(), async ctx => { // need to add api for the shopify auth call
+      // call getUser
       // const {shop, accessToken} = ctx.session;
       const body = JSON.parse(ctx.request.body)
       const {startDate, endDate, type} = body
@@ -29,7 +47,7 @@ module.exports = (router) => {
       }
     })
     .post("/newSaveCollection", koaBody(), async ctx => { // NEW COLLECTION
-      // {collectionId, collectionName, timeRange}
+      // {collectionId, collectionName, timeRange, products}
       // possible time range values: 7, 30, 90, 180
       try {
         const body = JSON.parse(ctx.request.body)
@@ -84,7 +102,6 @@ module.exports = (router) => {
           console.log(res)
           return res
         }))
-
         console.log(result)
         ctx.body = result
 
