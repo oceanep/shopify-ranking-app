@@ -47,19 +47,20 @@ app.use(
     async afterAuth(ctx) {
 
       const { shop, accessToken } = ctx.session;
+      console.log("accessToken", accessToken)
       const existingUser = await db.query('SELECT * FROM my_user')
       console.log("existingUser", existingUser)
       
       if (existingUser.length === 0) {
-        let now = moment.utc(new Date())
-        // need to convert now to UTC
-        // then convert back to use later
+        let momentObj = moment.utc(new Date())
+        let nowString = momentObj.format()
         const queryText = 'INSERT INTO my_user (shop, access_token, origin) VALUES($1, $2, $3) RETURNING *'
-        const insertResult = await db.query(queryText, [shop, accessToken, now])
+        const insertResult = await db.query(queryText, [shop, accessToken, nowString])
         console.log("insertResult", insertResult)
       } else {
         // update auth info 
-        const updateResult = await db.query(`UPDATE my_user SET access_token = '${accessToken}';`)
+        const updateQueryText = 'UPDATE my_user SET access_token = $1'
+        const updateResult = await db.query(updateQueryText, [accessToken])
         console.log("updateResult", updateResult)
       }
 

@@ -218,12 +218,15 @@ module.exports = {
               // pull from db to get dayCalc use custom function
               // turn orderCreatedAt into moment object
               // let target = moment.utc(orderCreatedAt); // build moment object from shopify created at date
-              let target = await getUser()
-              console.log(target)
-              // console.log("target from order created", target.format())
-              let origin = moment.utc();
 
+
+              let target = moment.utc() // current time in moment obj
+              let auth = await getUser() // get auth values from db
+              let origin = moment.utc(auth[0].origin) // convert to moment obj 
+              // target (current time) - origin (database origin)
               let days = target.diff(origin, 'days') + 1
+
+              console.log("days", days)
 
               let lineItemsPaginate = order.node.lineItems.pageInfo.hasNextPage; // boolean
               let cursor = order.cursor
