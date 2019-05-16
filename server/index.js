@@ -22,6 +22,7 @@ const cron = require('node-cron');
 const koaBody = require('koa-body');
 const parseDate = require('./parseDate');
 const moment = require('moment');
+const dateFunctions = require('./dateFunctions')
 dotenv.config();
 
 const {
@@ -50,6 +51,9 @@ app.use(
       console.log("accessToken", accessToken)
       const existingUser = await db.query('SELECT * FROM my_user')
       console.log("existingUser", existingUser)
+      console.log("date functions test", dateFunctions.calcuateDaysFromOrigin(moment.utc(new Date())))
+
+
       
       if (existingUser.length === 0) {
         let momentObj = moment.utc(new Date())
