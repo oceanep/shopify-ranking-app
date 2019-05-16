@@ -3,6 +3,7 @@ const functions = require('../functions');
 const db = require('../../db')
 const router = require('koa-router')();
 const koaBody = require('koa-body');
+const ranking = require('../ranking.js')
 
 // > const authDetails = await getUser()
 // > console.log(authDetails)
@@ -11,7 +12,7 @@ const koaBody = require('koa-body');
 //   access_token: '1',
 //   origin: 'Wed, 15 May 2019 09:02:20 GMT' }
 
-const getUser = async () => { 
+const getUser = async () => {
   try {
     const shop = await db.query(`SELECT * FROM my_user`);
     return shop[0]
@@ -23,28 +24,21 @@ const getUser = async () => {
 
 module.exports = (router) => {
   router
-    .get("/customSearch", (ctx, next) => {
-      // remember to add /api and /:shop
-      // SQL query
-      const startWeek = ctx.query.startWeek
-      const endWeek = ctx.query.endWeek
-      functions.customProductRank(startWeek, endWeek)
-      ctx.response.status = 200
-    })
     .post("/rankProducts", koaBody(), async ctx => { // need to add api for the shopify auth call
       // call getUser
       // const {shop, accessToken} = ctx.session;
       const body = JSON.parse(ctx.request.body)
-      const {startDate, endDate, type} = body
-      const result = await db.query(`SELECT * FROM orders_products WHERE ${type} BETWEEN ${startDate} AND ${endDate}`)
-      // do stuff
-      // need to check restrict product ids
-      // send back ranking (in order) product ids
-
-      console.log(result)
-      ctx.body = {
-        "sorted_ranked_product_ids": ["10293020", "11838929", "19392929"]
-      }
+      const {collectionId, timeInterval} = body
+      const res = ranking.productRank(collectionId, timeInterval)
+      // const result = await db.query(`SELECT * FROM orders_products WHERE ${type} BETWEEN ${startDate} AND ${endDate}`)
+      // // do stuff
+      // // need to check restrict product ids
+      // // send back ranking (in order) product ids
+      //
+      // console.log(result)
+      // ctx.body = {
+      //   "sorted_ranked_product_ids": ["10293020", "11838929", "19392929"]
+      // }
     })
     .post("/newSaveCollection", koaBody(), async ctx => { // NEW COLLECTION
       // {collectionId, collectionName, timeRange, products}
