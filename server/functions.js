@@ -1,6 +1,7 @@
 // import axios to make graphql call
 const axios = require('axios');
 const db = require('../db')
+const dateFunctions = require('./dateFunctions')
 const moment = require('moment');
 // import
 
@@ -206,57 +207,51 @@ module.exports = {
 
             let final = await ordersArray.reduce( async (acc, order) => {
 
-              let accumulator = await acc
+                let accumulator = await acc
 
-              let orderID = order.node.id.slice(20)
-              let orderCreatedAt = order.node.createdAt
-              console.log("\nORDER START")
-              console.log("orderID", orderID) // add to queryObj
-              console.log("orderCreatedAt", orderCreatedAt) // add to queryObj
-              // date calculation
+                let orderID = order.node.id.slice(20)
+                let orderCreatedAt = order.node.createdAt
+                console.log("\nORDER START")
+                console.log("orderID", orderID) // add to queryObj
+                console.log("orderCreatedAt", orderCreatedAt) // add to queryObj
+                
+                let target = moment.utc(orderCreatedAt)
+                // get all days from order created at
+                let days = await dateFunctions.calcuateDaysFromOrigin(target)
+                console.log("days", days)
 
-              // pull from db to get dayCalc use custom function
-              // turn orderCreatedAt into moment object
-              // let target = moment.utc(orderCreatedAt); // build moment object from shopify created at date
-              let target = await getUser()
-              console.log(target)
-              // console.log("target from order created", target.format())
-              let origin = moment.utc();
+                let lineItemsPaginate = order.node.lineItems.pageInfo.hasNextPage; // boolean
+                let cursor = order.cursor
+                let resArray = order.node.lineItems.edges
+                let lineItemCursor = resArray[resArray.length - 1].cursor
 
-              let days = target.diff(origin, 'days') + 1
+                // deal with the first page of line items
+                let productIdArray = resArray.map((lineItem) => (lineItem.node.product.id.slice(22)))
 
-              let lineItemsPaginate = order.node.lineItems.pageInfo.hasNextPage; // boolean
-              let cursor = order.cursor
-              let resArray = order.node.lineItems.edges
-              let lineItemCursor = resArray[resArray.length - 1].cursor
+                console.log(acc)
+                console.log(productIdArray)
 
-              // deal with the first page of line items
-              let productIdArray = resArray.map((lineItem) => (lineItem.node.product.id.slice(22)))
+                // paginate the remaining line items
+                if (lineItemsPaginate) {
+                    console.log(`NEXT PAGE ${lineItemsPaginate}`)
 
-              console.log(acc)
-              console.log(productIdArray)
-
-              // paginate the remaining line items
-              if (lineItemsPaginate) {
-                  console.log(`NEXT PAGE ${lineItemsPaginate}`)
-
-                  productIdArray = productIdArray.concat(await lineItemPagination(orderID, lineItemCursor, [], accessToken, shop))
-                  console.log("paginated line items ", productIdArray)
-              }
-
-              let itemsArray = productIdArray.map( product => (
-                {
-                  orderId: orderID,
-                  productId: product,
-                  days: days,
-                  createdAt: orderCreatedAt
+                    productIdArray = productIdArray.concat(await lineItemPagination(orderID, lineItemCursor, [], accessToken, shop))
+                    console.log("paginated line items ", productIdArray)
                 }
-              ))
+
+                let itemsArray = productIdArray.map( product => (
+                {
+                    orderId: orderID,
+                    productId: product,
+                    days: days,
+                    createdAt: orderCreatedAt
+                }
+                ))
 
 
 
 
-              return accumulator.concat(itemsArray)
+                return accumulator.concat(itemsArray)
 
             }, [])
 
