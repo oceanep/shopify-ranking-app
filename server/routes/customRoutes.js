@@ -109,9 +109,20 @@ module.exports = (router) => {
         ctx.body = err
       }
     })
-    .post("/restoreRestricedProducts", koaBody(), ctx => {
+    .post("/restoreRestricedProducts", koaBody(), async ctx => {
       // {collection_id}
       // change restore boolean
+      try {
+        const body = JSON.parse(ctx.request.body)
+        console.log(body)
+        const {collectionId} = body
+        const restoreQuery = 'UPDATE collections SET restore = ($1) WHERE collection_id = ($2) RETURNING *'
+        const restoreResult = await db.query(restoreQuery, [true, collectionId])
+        console.log(restoreResult)
+        ctx.body = restoreResult
+      } catch(err) {
+        ctx.body = err
+      }
     })
     .post("/stopWatchingCollection", koaBody(), async ctx => {
       // {collection_id}
