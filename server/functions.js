@@ -210,10 +210,10 @@ module.exports = {
                 console.log("\nORDER START")
                 console.log("orderID", orderID) // add to queryObj
                 console.log("orderCreatedAt", orderCreatedAt) // add to queryObj
-                
+
                 let target = moment.utc(orderCreatedAt)
                 // get all days from order created at
-                let days = await dateFunctions.calcuateDaysFromOrigin(target)
+                let days = await dateFunctions.dayCalc(target)
                 console.log("days", days)
 
                 let lineItemsPaginate = order.node.lineItems.pageInfo.hasNextPage; // boolean

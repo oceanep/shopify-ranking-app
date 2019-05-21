@@ -50,12 +50,12 @@ app.use(
       console.log("accessToken", accessToken)
       const existingUser = await db.query('SELECT * FROM my_user')
       console.log("existingUser", existingUser)
-      console.log("date functions test", dateFunctions.calcuateDaysFromOrigin(moment.utc(new Date())))
+      console.log("date functions test", dateFunctions.dayCalc(moment.utc(new Date())))
 
 
 
       if (existingUser.length === 0) {
-        let momentObj = moment.utc(new Date())
+        let momentObj = dateFunctions.timeIntervalMoment('180', moment.utc(new Date()))
         let nowString = momentObj.format()
         const queryText = 'INSERT INTO my_user (shop, access_token, origin) VALUES($1, $2, $3) RETURNING *'
         const insertResult = await db.query(queryText, [shop, accessToken, nowString])
