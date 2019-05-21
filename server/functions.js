@@ -9,7 +9,7 @@ const sleep = (milliseconds) => {
   return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
 
-const getUser = async () => { 
+const getUser = async () => {
     try {
       const shop = await db.query(`SELECT * FROM my_user`);
       return shop[0]
@@ -167,10 +167,6 @@ const productQueryBuilder = (obj) => { // take object products, orderID, month, 
 
 module.exports = {
 
-    customProductRank: (start, end) => {
-        console.log("custom product rank", start, end)
-        // query database directly
-    },
     buildDatabase: async (shop, accessToken, lastSyncDate) => {
         // might need to add a cursor argument for pagination
         // need to have the "created at" for the next day's query be the time the last query started
@@ -214,10 +210,10 @@ module.exports = {
                 console.log("\nORDER START")
                 console.log("orderID", orderID) // add to queryObj
                 console.log("orderCreatedAt", orderCreatedAt) // add to queryObj
-                
+
                 let target = moment.utc(orderCreatedAt)
                 // get all days from order created at
-                let days = await dateFunctions.calcuateDaysFromOrigin(target)
+                let days = await dateFunctions.dayCalc(target)
                 console.log("days", days)
 
                 let lineItemsPaginate = order.node.lineItems.pageInfo.hasNextPage; // boolean

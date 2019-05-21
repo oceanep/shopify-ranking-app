@@ -20,7 +20,6 @@ import appProxy from "../middleware/appProxy";
 import { start } from "repl";
 const cron = require('node-cron');
 const koaBody = require('koa-body');
-const parseDate = require('./parseDate');
 const moment = require('moment');
 const dateFunctions = require('./dateFunctions')
 dotenv.config();
@@ -51,18 +50,18 @@ app.use(
       console.log("accessToken", accessToken)
       const existingUser = await db.query('SELECT * FROM my_user')
       console.log("existingUser", existingUser)
-      console.log("date functions test", dateFunctions.calcuateDaysFromOrigin(moment.utc(new Date())))
+      console.log("date functions test", dateFunctions.dayCalc(moment.utc(new Date())))
 
 
-      
+
       if (existingUser.length === 0) {
-        let momentObj = moment.utc(new Date())
+        let momentObj = dateFunctions.timeIntervalMoment('180', moment.utc(new Date()))
         let nowString = momentObj.format()
         const queryText = 'INSERT INTO my_user (shop, access_token, origin) VALUES($1, $2, $3) RETURNING *'
         const insertResult = await db.query(queryText, [shop, accessToken, nowString])
         console.log("insertResult", insertResult)
       } else {
-        // update auth info 
+        // update auth info
         const updateQueryText = 'UPDATE my_user SET access_token = $1'
         const updateResult = await db.query(updateQueryText, [accessToken])
         console.log("updateResult", updateResult)

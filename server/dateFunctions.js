@@ -2,15 +2,18 @@ const userAuth = require('./getUser')
 const moment = require('moment');
 
 module.exports = {
-    calcuateDaysFromOrigin: async (target) => { // now utc.moment obj, origin from db
+    dayCalc: async (target) => { // now utc.moment obj, origin from db
         // let target = moment.utc() // current time in moment obj
         let auth = await userAuth.getUser() // get auth values from db
-        
-        let origin = moment.utc(auth.origin) // convert to moment obj 
+
+        console.log('Day Calc auth.origin', auth.origin)
+        let origin = moment.utc(auth.origin) // convert to moment obj
+        console.log('Day Calc origin, target', origin, target)
         // target (current time) - origin (database origin)
         return target.diff(origin, 'days') + 1 // days: 64
     },
     timeIntervalMoment: (timeInterval, now) => { // returns moment obj
-        return now.subtract(+timeInterval, "days")
+        let result = now.clone()
+        return result.subtract(+timeInterval, "days")
     }
 }
