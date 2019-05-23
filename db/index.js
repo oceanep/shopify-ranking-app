@@ -4,7 +4,7 @@ const connectionString = 'postgresql://dbuser:secretpassword@database.server.com
 
 const Pool = require('pg').Pool
 const pool = new Pool({
-  user: 'kabirvirji',
+  user: 'Ocean',
   host: 'localhost',
   database: 'ranking',
   password: 'password',
