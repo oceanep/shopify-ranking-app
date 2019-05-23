@@ -1,18 +1,19 @@
+const db = require('../db')
+const rank = require('./ranking')
 
+cron.schedule('0 4 * * *', async () => {
 
-cron.schedule('0 4 * * *', () => {
+  // pull everything from collection table 
+  const allRankedCollections = await db.query(`SELECT * FROM collections`)
+  allRankedCollections.forEach(async collection => {
+    let collectionId = collection.collection_id
+    let timeInterval = collection.time_range
+    let sortedArr = await rank.productRank(collectionId, timeInterval)
+    console.log(`sortedArr ${sortedArr} for collection ${collectionId}`)
+    // run series of shopify api calls to update ranked collection
+    
+  });
 
-  // re rank on cron job 
-  // two types of re-rank (smart, manual)
-  // cron job only UPDATES collections (does not create new ones)
-  // for all ranked collections 
-  // pull from collections table the collection id and time range
-  // call the ranking function on each one 
-  // somehow do the shopify calls to re rank the collections 
-
-  // if collection has restore false
-  // query restricted products for that collection
-  // filter sortedArr using those products
 
 }, {
   scheduled: true, 

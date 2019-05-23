@@ -6,7 +6,6 @@ const userAuth = require('./getUser')
 const axios = require('axios');
 const filter = require('./filterRanked')
 
-
 module.exports = {
   productRank: async (collectionId, timeInterval) => {
       console.log("product rank")
@@ -41,12 +40,13 @@ module.exports = {
       let collectionQueryText = 'SELECT * FROM collections WHERE collection_id = ($1)'
       let collectionResult = await db.query(collectionQueryText, [collectionId])
       console.log("collection result", collectionResult)
-
-      const final = await filter.filterRanked(collectionId, sortedArr)
-      
-      // filter sortedArr only happens if restore (from collection table) is false
+      if (!collectionResult[0].restore) {
+        const final = await filter.filterRanked(collectionId, sortedArr)
+        console.log('final sortedArr after filtering', final)
+        return final
+      }
       console.log('sorted arr', sortedArr)
-      console.log('final', final)
-      return final
+      return sortedArr
+
   },
 }

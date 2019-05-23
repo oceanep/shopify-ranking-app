@@ -50,16 +50,17 @@ app.use(
       console.log("accessToken", accessToken)
       const existingUser = await db.query('SELECT * FROM my_user')
       console.log("existingUser", existingUser)
-      console.log("date functions test", dateFunctions.dayCalc(moment.utc(new Date())))
 
-
-
-      if (existingUser.length === 0) {
+      if (existingUser.length === 0) { // executed on initial install
         let momentObj = dateFunctions.timeIntervalMoment('180', moment.utc(new Date()))
-        let nowString = momentObj.format()
-        const queryText = 'INSERT INTO my_user (shop, access_token, origin) VALUES($1, $2, $3) RETURNING *'
-        const insertResult = await db.query(queryText, [shop, accessToken, nowString])
+        let originString = momentObj.format()
+        let momentSync = moment.utc(new Date())
+        let lastSyncDate = momentSync.format()
+        console.log("lastSyncDate", lastSyncDate)
+        const queryText = 'INSERT INTO my_user (shop, access_token, origin, last_sync_date) VALUES($1, $2, $3, $4) RETURNING *'
+        const insertResult = await db.query(queryText, [shop, accessToken, originString, lastSyncDate])
         console.log("insertResult", insertResult)
+
       } else {
         // update auth info
         const updateQueryText = 'UPDATE my_user SET access_token = $1'

@@ -65,7 +65,20 @@ module.exports = (router) => {
       }catch(err) {
         ctx.body = err
       }
-
+    })
+    .post("/isSmartCollection", koaBody(), async ctx => {
+      // { collectionId }
+      try {
+        const body = JSON.parse(ctx.request.body)
+        console.log(body)
+        const {collectionId} = body
+        const queryText = 'SELECT * FROM collections WHERE collection_id = ($1)'
+        const result = await db.query(queryText, [collectionId])
+        console.log(result)
+        ctx.body = result[0].smart_collection
+      } catch(err) {
+        ctx.body = err
+      }
     })
     .post("/restrictProducts", koaBody(), async ctx => {
       // {collection_id, [id1, id2, id3]}

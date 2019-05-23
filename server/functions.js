@@ -75,7 +75,7 @@ const ordersQuery = async (shop, accessToken, lastSyncDate, cursor='') => {
         data: {
             query: `
                 {
-                    orders(first:10, ${cursor ? `after:"${cursor}",` : ''} query:"created_at:>#{2019-01-01T00:00:01}") {
+                    orders(first:10, ${cursor ? `after:"${cursor}",` : ''} query:"created_at:>#{${lastSyncDate}}") {
                         edges {
                         cursor
                             node {
@@ -129,45 +129,22 @@ const ordersQuery = async (shop, accessToken, lastSyncDate, cursor='') => {
 }
 
 const productQueryBuilder = (obj) => { // take object products, orderID, month, week, createdAt
-
-    let tempArr = []
-    console.log("obj", obj)
-
+    console.log("productQueryBuilder")
     const {
         orderId,
         productId,
         days,
         createdAt
     } = obj
-
-
-    let queryObj = {
-        orderId: orderId,
-        productId: productId,
-        days: days,
-        created_at: createdAt
-    }
-
-    console.log(queryObj)
-
-    // make database call
-    console.log("db.query")
     const queryText = 'INSERT INTO order_product_data (order_id, product_id, day, created_at) VALUES($1, $2, $3, $4) RETURNING *'
     db.query(queryText, [orderId, productId, days, createdAt])
-    // return tempArr
   }
 
 
 module.exports = {
 
     buildDatabase: async (shop, accessToken, lastSyncDate) => {
-        // might need to add a cursor argument for pagination
-        // need to have the "created at" for the next day's query be the time the last query started
-        // save the current time on query
         console.log("buildDatabase", shop, accessToken, lastSyncDate)
-        let queryArr = []
-        let counter = 0
-
         try {
             const ordersArray = await ordersQuery(shop, accessToken, lastSyncDate)
             console.log('\nCompleted orders array', ordersArray)
