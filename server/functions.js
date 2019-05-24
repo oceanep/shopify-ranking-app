@@ -1,25 +1,13 @@
-// import axios to make graphql call
 const axios = require('axios');
 const db = require('../db')
 const dateFunctions = require('./dateFunctions')
 const moment = require('moment');
-// import
 
 const sleep = (milliseconds) => {
   return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
 
-const getUser = async () => {
-    try {
-      const shop = await db.query(`SELECT * FROM my_user`);
-      return shop[0]
-    } catch(err) {
-      console.log(err)
-    }
-  }
-
 const lineItemPagination = async (order_id, cursor, dataArray, accessToken, shop) => {
-    // gql query
     console.log(`query variables: order id ${order_id}, line item cursor ${cursor}`)
     try {
       console.log('waiting...')
@@ -52,7 +40,6 @@ const lineItemPagination = async (order_id, cursor, dataArray, accessToken, shop
             }
         })
         // save product data
-        // edges[0].products.id
         let nextPage = res.data.data.order.lineItems.pageInfo.hasNextPage
         let lineItems = res.data.data.order.lineItems.edges
         let finalIdx = lineItems.length - 1
@@ -66,11 +53,9 @@ const lineItemPagination = async (order_id, cursor, dataArray, accessToken, shop
         console.log(`failed in lineitems check ${err.stack}`)
     }
 
-    // has next page ? then lineItemPagination
-
 }
 
-// 2018-01-01T00:00:01
+// 2018-01-01T00:00:01 Z
 
 const ordersQuery = async (shop, accessToken, lastSyncDate, cursor='') => {
   console.log('\nTrying orders Query')
@@ -82,7 +67,7 @@ const ordersQuery = async (shop, accessToken, lastSyncDate, cursor='') => {
         data: {
             query: `
                 {
-                    orders(first:10, ${cursor ? `after:"${cursor}",` : ''} query:"created_at:>#{2019-01-01T00:00:01}") {
+                    orders(first:10, ${cursor ? `after:"${cursor}",` : ''} query:"created_at:>#{${lastSyncDate}}") {
                         edges {
                         cursor
                             node {
@@ -136,70 +121,25 @@ const ordersQuery = async (shop, accessToken, lastSyncDate, cursor='') => {
 }
 
 const productQueryBuilder = (obj) => { // take object products, orderID, month, week, createdAt
-
-    let tempArr = []
-    console.log("obj", obj)
-
+    console.log("productQueryBuilder")
     const {
         orderId,
         productId,
         days,
         createdAt
     } = obj
-
-
-    let queryObj = {
-        orderId: orderId,
-        productId: productId,
-        days: days,
-        created_at: createdAt
-    }
-
-    console.log(queryObj)
-
-    // make database call
-    console.log("db.query")
     const queryText = 'INSERT INTO order_product_data (order_id, product_id, day, created_at) VALUES($1, $2, $3, $4) RETURNING *'
     db.query(queryText, [orderId, productId, days, createdAt])
-    // return tempArr
   }
 
 
 module.exports = {
 
     buildDatabase: async (shop, accessToken, lastSyncDate) => {
-        // might need to add a cursor argument for pagination
-        // need to have the "created at" for the next day's query be the time the last query started
-        // save the current time on query
         console.log("buildDatabase", shop, accessToken, lastSyncDate)
-        let queryArr = []
-        let counter = 0
-
         try {
             const ordersArray = await ordersQuery(shop, accessToken, lastSyncDate)
             console.log('\nCompleted orders array', ordersArray)
-
-            /*
-            order_id, product_id, month, week, order_created_at
-            10000000, 1111111111,     1,    2,
-            10000000, 2222222222,     1,    2, 2019-01-10T03:25:48Z
-            19999999, 1010101010,     2,    7, 2019-02-21T03:28:48Z
-            19999999, 2222222222,     2,    7, 2019-02-21T03:28:48Z
-
-            need to insert on each iteration of line items because the database can look like
-            the query object way can't handle multiple inserts
-
-            */
-            // if we are pushing values when we get them, the order of the column rows should change so the values array is correct
-            // we can either change the column name order or store all the values and build the queryObj at the end like [option1, option4, option3, option2]
-            // can have an object that persists through the loop with all the values we need to insert at the end in the right place
-            // order created at or product created at?
-            //console.log(res.data.data.orders.edges[0.node.lineItems.edges[0]])
-
-            // let queryObj = {
-            //     text: 'INSERT INTO orders_products (order_id, product_id, month, week, created_at) VALUES($1, $2, $3, $4, $5)',
-            //     values: [],
-            // }
 
             let final = await ordersArray.reduce( async (acc, order) => {
 
@@ -244,9 +184,6 @@ module.exports = {
                 }
                 ))
 
-
-
-
                 return accumulator.concat(itemsArray)
 
             }, [])
@@ -263,21 +200,3 @@ module.exports = {
     }
 
 }
-// .then(result => {
-//             let { customers } = result.data.data;
-//             paginate = customers.pageInfo.hasNextPage;
-//             prevCursor = customers.edges[customers.edges.length - 1].cursor //last cursor (last node's cursor) in array
-//             console.log(prevCursor);
-//             customerArr = []
-//             customerArr = [...customerArr, ...customers.edges];
-//             if (!paginate) { //if hasNextPage is true, run a while loop to retrieve remaining customers
-//                 console.log("many pages");
-//                 sleep.sleep(4);
-//                 requestCustomerPaginated(accessToken, shop, prevCursor, res, (x) => getOrders(x, accessToken, shop,0, (x) => mcSync(x, accessToken, shop, (x)  => res.send({ customerArray: x }))))
-//             } else { //if hasNextPage is false, no need to paginate
-//                 getOrders(customerArr, accessToken, shop, 0, (customerArr) => mcSync(customerArr, accessToken, shop, (customerArr) => res.send({ customerArray: customerArr })))
-//             }
-//             }).catch(error => {
-//             console.log(error)
-//             })
-//     }

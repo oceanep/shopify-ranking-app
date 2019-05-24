@@ -5,28 +5,12 @@ const router = require('koa-router')();
 const koaBody = require('koa-body');
 const ranking = require('../ranking.js')
 
-// > const authDetails = await getUser()
-// > console.log(authDetails)
-// { id: 2,
-//   shop: 'kabir-test.myshopify.com',
-//   access_token: '1',
-//   origin: 'Wed, 15 May 2019 09:02:20 GMT' }
-
-const getUser = async () => {
-  try {
-    const shop = await db.query(`SELECT * FROM my_user`);
-    return shop[0]
-  } catch(err) {
-    console.log(err)
-  }
-}
-
-
 module.exports = (router) => {
   router
     .post("/rankProducts", koaBody(), async ctx => { // need to add api for the shopify auth call
       // call getUser
       // const {shop, accessToken} = ctx.session;
+      console.log("rank products")
       const body = JSON.parse(ctx.request.body)
       const {collectionId, timeInterval} = body
       const res = ranking.productRank(collectionId, timeInterval)
@@ -55,7 +39,7 @@ module.exports = (router) => {
         ctx.body = err
       }
     })
-    .put("/updateCollection", koaBody(), async ctx => { // NEW COLLECTION
+    .put("/updateCollection", koaBody(), async ctx => {
       // {collectionId, collectionName, timeRange}
       // possible time range values: 7, 30, 90, 180
       try {
@@ -81,7 +65,20 @@ module.exports = (router) => {
       }catch(err) {
         ctx.body = err
       }
-
+    })
+    .post("/isSmartCollection", koaBody(), async ctx => {
+      // { collectionId }
+      try {
+        const body = JSON.parse(ctx.request.body)
+        console.log(body)
+        const {collectionId} = body
+        const queryText = 'SELECT * FROM collections WHERE collection_id = ($1)'
+        const result = await db.query(queryText, [collectionId])
+        console.log(result)
+        ctx.body = result[0].smart_collection
+      } catch(err) {
+        ctx.body = err
+      }
     })
     .post("/restrictProducts", koaBody(), async ctx => {
       // {collection_id, [id1, id2, id3]}
@@ -103,9 +100,20 @@ module.exports = (router) => {
         ctx.body = err
       }
     })
-    .post("/restoreRestricedProducts", koaBody(), ctx => {
+    .post("/restoreRestricedProducts", koaBody(), async ctx => {
       // {collection_id}
       // change restore boolean
+      try {
+        const body = JSON.parse(ctx.request.body)
+        console.log(body)
+        const {collectionId} = body
+        const restoreQuery = 'UPDATE collections SET restore = ($1) WHERE collection_id = ($2) RETURNING *'
+        const restoreResult = await db.query(restoreQuery, [true, collectionId])
+        console.log(restoreResult)
+        ctx.body = restoreResult
+      } catch(err) {
+        ctx.body = err
+      }
     })
     .post("/stopWatchingCollection", koaBody(), async ctx => {
       // {collection_id}
