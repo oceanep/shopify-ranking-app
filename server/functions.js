@@ -1,16 +1,13 @@
-// import axios to make graphql call
 const axios = require('axios');
 const db = require('../db')
 const dateFunctions = require('./dateFunctions')
 const moment = require('moment');
-// import
 
 const sleep = (milliseconds) => {
   return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
 
 const lineItemPagination = async (order_id, cursor, dataArray, accessToken, shop) => {
-    // gql query
     console.log(`query variables: order id ${order_id}, line item cursor ${cursor}`)
     try {
       console.log('waiting...')
@@ -43,7 +40,6 @@ const lineItemPagination = async (order_id, cursor, dataArray, accessToken, shop
             }
         })
         // save product data
-        // edges[0].products.id
         let nextPage = res.data.data.order.lineItems.pageInfo.hasNextPage
         let lineItems = res.data.data.order.lineItems.edges
         let finalIdx = lineItems.length - 1
@@ -57,16 +53,12 @@ const lineItemPagination = async (order_id, cursor, dataArray, accessToken, shop
         console.log(`failed in lineitems check ${err.stack}`)
     }
 
-    // has next page ? then lineItemPagination
-
 }
 
-// 2018-01-01T00:00:01
+// 2018-01-01T00:00:01 Z
 
 const ordersQuery = async (shop, accessToken, lastSyncDate, cursor='') => {
   console.log('\nTrying orders Query')
-  // use moment to make lastSyncDate a string like 2019-01-01T00:00:01
-  // if lastSyncDate is a moment object 
   try {
     let res = await axios({
         url: `https://${shop}/admin/api/graphql.json`,

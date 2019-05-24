@@ -22,6 +22,9 @@ const cron = require('node-cron');
 const koaBody = require('koa-body');
 const moment = require('moment');
 const dateFunctions = require('./dateFunctions')
+// cron jobs
+// const dbCron = require('./cron-db');
+// const rankingCron = require('./cron-rank')
 dotenv.config();
 
 const {
@@ -111,8 +114,6 @@ app.use(async (ctx, next) => {
     });
   }
 });
-
-// cron jobs
 
 
 
