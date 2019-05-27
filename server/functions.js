@@ -73,7 +73,7 @@ const ordersQuery = async (shop, accessToken, lastSyncDate, cursor='') => {
                             node {
                                 createdAt
                                 id
-                                lineItems(first:1) {
+                                lineItems(first:10) {
                                     edges {
                                         cursor
                                         node {
