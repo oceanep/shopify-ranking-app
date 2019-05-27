@@ -1,31 +1,19 @@
-
-
+const Pool = require('pg').Pool
 const connectionString = 'postgresql://dbuser:secretpassword@database.server.com:3211/mydb'
 
-const Pool = require('pg').Pool
+// production
+// const pool = new Pool({
+//   connectionString: connectionString,
+// })
+
+// local testing
 const pool = new Pool({
-  user: 'Ocean',
+  user: 'kabirvirji',
   host: 'localhost',
   database: 'ranking',
   password: 'password',
   port: 5432,
 })
-
-// module.exports = {
-//   query: (text, params) => {
-//     const start = Date.now()
-//     return pool.query(text, params, async (err, res) => {
-//       try {
-//         const duration = Date.now() - start
-//         console.log('executed query', { text, duration, rows: res.rowCount })
-//         console.log(res)
-//         callback(err, res)
-//       } catch (err) {
-//         console.log(err)
-//       }
-//     })
-//   }
-// }
 
 module.exports = {
   query: async (text, params) => {
