@@ -7,26 +7,16 @@ const ranking = require('../ranking.js')
 
 module.exports = (router) => {
   router
-    .post("/rankProducts", koaBody(), async ctx => { // need to add api for the shopify auth call
-      // call getUser
-      // const {shop, accessToken} = ctx.session;
+    .post("/rankProducts", koaBody(), async ctx => {
       console.log("rank products")
       const body = JSON.parse(ctx.request.body)
       const {collectionId, timeInterval} = body
-      const res = ranking.productRank(collectionId, timeInterval)
-      // const result = await db.query(`SELECT * FROM orders_products WHERE ${type} BETWEEN ${startDate} AND ${endDate}`)
-      // // do stuff
-      // // need to check restrict product ids
-      // // send back ranking (in order) product ids
-      //
-      // console.log(result)
-      // ctx.body = {
-      //   "sorted_ranked_product_ids": ["10293020", "11838929", "19392929"]
-      // }
+      const res = await ranking.productRank(collectionId, timeInterval)
+      ctx.body = res
     })
-    .post("/newSaveCollection", koaBody(), async ctx => { // NEW COLLECTION
+    .post("/newSaveCollection", koaBody(), async ctx => {
       // {collectionId, collectionName, timeRange, products}
-      // possible time range values: 7, 30, 90, 180
+      // possible time range values: '7', '30', '90', '180'
       try {
         const body = JSON.parse(ctx.request.body)
         console.log(body)
@@ -41,7 +31,7 @@ module.exports = (router) => {
     })
     .put("/updateCollection", koaBody(), async ctx => {
       // {collectionId, collectionName, timeRange}
-      // possible time range values: 7, 30, 90, 180
+      // possible time range values: '7', '30', '90', '180'
       try {
         const body = JSON.parse(ctx.request.body)
         console.log(body)

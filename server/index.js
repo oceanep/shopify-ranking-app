@@ -23,8 +23,8 @@ const koaBody = require('koa-body');
 const moment = require('moment');
 const dateFunctions = require('./dateFunctions')
 // cron jobs
-// const dbCron = require('./cron-db');
-// const rankingCron = require('./cron-rank')
+const dbCron = require('./cron-db');
+const rankingCron = require('./cron-rank')
 dotenv.config();
 
 const {
@@ -46,7 +46,7 @@ app.use(
     apiKey: SHOPIFY_API_KEY,
     secret: SHOPIFY_SECRET,
     accessMode: 'offline',
-    scopes: ['read_products', 'read_orders', 'unauthenticated_read_product_listings'],
+    scopes: ['read_products', 'read_orders', 'read_product_listings'],
     async afterAuth(ctx) {
 
       const { shop, accessToken } = ctx.session;
@@ -54,7 +54,7 @@ app.use(
       const existingUser = await db.query('SELECT * FROM my_user')
       console.log("existingUser", existingUser)
 
-      if (existingUser.length === 0) { // executed on initial install
+      if (!existingUser || existingUser.length === 0) { // executed on initial install
         let momentObj = dateFunctions.timeIntervalMoment('180', moment.utc(new Date()))
         let originString = momentObj.format()
         let momentSync = moment.utc(new Date())
@@ -63,6 +63,7 @@ app.use(
         const queryText = 'INSERT INTO my_user (shop, access_token, origin, last_sync_date) VALUES($1, $2, $3, $4) RETURNING *'
         const insertResult = await db.query(queryText, [shop, accessToken, originString, lastSyncDate])
         console.log("insertResult", insertResult)
+        functions.buildDatabase(shop, accessToken, originString)
 
       } else {
         // update auth info
@@ -73,7 +74,7 @@ app.use(
 
       ctx.cookies.set('shopOrigin', shop, { httpOnly: false });
       console.log("AUTH", shop, accessToken)
-      functions.buildDatabase(shop, accessToken, new Date())
+      
       ctx.redirect("/");
     }
   })
