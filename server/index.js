@@ -14,7 +14,7 @@ import webpack from "webpack";
 import proxy from "@shopify/koa-shopify-graphql-proxy";
 const ShopifyAPIClient = require("shopify-api-node");
 import webhookVerification from "../middleware/webhookVerification";
-const db = require('../db')
+const db = require('./db')
 const functions = require('./functions');
 import appProxy from "../middleware/appProxy";
 import { start } from "repl";

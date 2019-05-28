@@ -1,7 +1,7 @@
 //Ranking Algorithim
 const dateFunctions = require('./dateFunctions')
 const moment = require('moment')
-const db = require('../db')
+const db = require('./db')
 const userAuth = require('./getUser')
 const axios = require('axios');
 const filter = require('./filterRanked')
