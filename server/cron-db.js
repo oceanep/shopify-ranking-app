@@ -2,7 +2,7 @@ const cron = require('node-cron');
 const moment = require('moment');
 const userAuth = require('./getUser')
 const functions = require('./functions');
-const db = require('../db')
+const db = require('./db')
 
 cron.schedule('0 4 * * *', async () => {
   console.log('build database cron');

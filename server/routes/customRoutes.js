@@ -1,6 +1,6 @@
 const ShopifyAPIClient = require("shopify-api-node");
 const functions = require('../functions');
-const db = require('../../db')
+const db = require('../db')
 const router = require('koa-router')();
 const koaBody = require('koa-body');
 const ranking = require('../ranking.js')
