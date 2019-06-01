@@ -11,6 +11,7 @@ module.exports = {
         const finalArr = sortedArr.filter(function(item) {
             return !restrictedProducts.includes(item.rank); 
         })
+        // if exists custom collection, delete every product from shopify 
         return finalArr
         }
     }

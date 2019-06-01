@@ -11,11 +11,14 @@ module.exports = (router) => {
       console.log("rank products")
       const body = JSON.parse(ctx.request.body)
       const {collectionId, timeInterval} = body
-      const res = await ranking.productRank(collectionId, timeInterval)
+      const res = await ranking.productRank(collectionId, timeInterval) // filter happens in here, api call happens here
+      // res will have POST request result with collectionId
+      // save to collection db (collectionId, collectionName, timeRange, false])
+      
       ctx.body = res
     })
     .post("/newSaveCollection", koaBody(), async ctx => {
-      // {collectionId, collectionName, timeRange, products}
+      // {collectionId, collectionName, timeRange, restore}
       // possible time range values: '7', '30', '90', '180'
       try {
         const body = JSON.parse(ctx.request.body)
@@ -71,7 +74,8 @@ module.exports = (router) => {
       }
     })
     .post("/restrictProducts", koaBody(), async ctx => {
-      // {collection_id, [id1, id2, id3]}
+      // {collection_id, [product_id1, product_id2, product_id3]}
+      // restrict and delete from shopify 
       try {
         console.log("restrict products")
         const body = JSON.parse(ctx.request.body)
@@ -84,6 +88,7 @@ module.exports = (router) => {
           return res
         }))
         console.log(result)
+        // delete_from_shopify(collection_id, restrictedProductArr)
         ctx.body = result
 
       }catch(err) {

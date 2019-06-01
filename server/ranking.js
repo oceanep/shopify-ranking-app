@@ -7,7 +7,7 @@ const axios = require('axios');
 const filter = require('./filterRanked')
 
 module.exports = {
-  productRank: async (collectionId, timeInterval) => {
+  productRank: async (collectionId, timeInterval) => { // old collection id
       console.log("product rank")
       //  get shop
       const shop = await userAuth.getUser();
@@ -40,13 +40,38 @@ module.exports = {
       let collectionQueryText = 'SELECT * FROM collections WHERE collection_id = ($1)'
       let collectionResult = await db.query(collectionQueryText, [collectionId])
       console.log("collection result", collectionResult)
-      if (!collectionResult[0].restore) {
-        const final = await filter.filterRanked(collectionId, sortedArr)
-        console.log('final sortedArr after filtering', final)
-        return final
+
+      // just hitting api calls here and calling other functions
+
+      if (!collectionResult) { // new collection
+        console.log("new collection")
+        // if smart
+        // if custom
+
+      } else { // collection exists
+        console.log("collection exists")
+        // if smart
+        // if custom
+
       }
-      console.log('sorted arr', sortedArr)
+
+      // if new smart collection -> rank -> create collection (hit api) -> send products in order (hit api)
+      // if exists smart collection -> rank -> send products in order (hit api)
+      // if new custom collection -> rank -> create (hit api)
+      // if new custom -> if restircted products -> 
+      // if exists custom -> delete route for every product no restricted products -> filter )
+
+      // if there is no collection (doesn't exist yet)
+      // 
+
+      // if (!collectionResult[0].restore) {
+      //   const final = await filter.filterRanked(collectionId, sortedArr)
+      //   console.log('final sortedArr after filtering', final)
+      //   return final
+      // }
+      // console.log('sorted arr', sortedArr)
       return sortedArr
+      // call shopify here, get name from collection
 
   },
 }
