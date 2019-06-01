@@ -14,7 +14,7 @@ module.exports = (router) => {
       const res = await ranking.productRank(collectionId, timeInterval) // filter happens in here, api call happens here
       // res will have POST request result with collectionId
       // save to collection db (collectionId, collectionName, timeRange, false])
-      
+
       ctx.body = res
     })
     .post("/newSaveCollection", koaBody(), async ctx => {
