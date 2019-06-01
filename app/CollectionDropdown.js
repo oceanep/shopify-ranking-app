@@ -9,12 +9,15 @@ export default class CollectionDropdown extends React.Component {
     super(props)
     this.state = {
       selected: '',
-      collections: []
+      collections: [],
+      newRanking: this.props.new
     }
   }
 
   componentDidMount() {
-    //check this.props.type and decide which collections api to ping
+    //check newRanking and decide which collections api to ping
+    //if new, ping middleware to ping all Collections
+    //if not, ping middleware for all ranked collections
     later(1000, ['collection1','collection2','collection3']).then(
       res => {
         console.log(res)
@@ -50,9 +53,10 @@ export default class CollectionDropdown extends React.Component {
           value={this.state.selected}
           placeholder="Select a Collection"
         />
+
         <PageActions
           primaryAction={{ content:'Select', onAction: this.selectCollection }}
-          secondaryActions={[{ content: 'Cancel', onAction: () => {this.props.onSelect('landing')}}]}
+          secondaryActions={[{ content: 'Back', onAction: () => {this.props.onSelect('landing')}}]}
         />
       </React.Fragment>
     );
