@@ -12,7 +12,8 @@ module.exports = (router) => {
       const body = JSON.parse(ctx.request.body)
       const {collectionId, timeInterval} = body
       const res = await ranking.productRank(collectionId, timeInterval) // filter happens in here, api call happens here
-      // res will have POST request result with collectionId
+      // res variable will have POST request result (send back) collectionId, restricted products, timeInterval etc. anything that needs db calls
+      // make needed route calls using POST data on frontend {collectionId, restrictedArr, timeInterval}
       // save to collection db (collectionId, collectionName, timeRange, false])
 
       ctx.body = res

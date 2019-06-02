@@ -46,7 +46,7 @@ app.use(
     apiKey: SHOPIFY_API_KEY,
     secret: SHOPIFY_SECRET,
     accessMode: 'offline',
-    scopes: ['read_products', 'read_orders', 'read_product_listings'],
+    scopes: ['read_products', 'read_orders', 'read_product_listings', 'write_products'],
     async afterAuth(ctx) {
 
       const { shop, accessToken } = ctx.session;
