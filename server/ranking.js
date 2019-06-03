@@ -176,10 +176,13 @@ module.exports = {
           console.log("existing smart collection")
           // filter(sortedArr)
           let filteredArr = await filter.filterRanked(collectionId, sortedArr)
+          console.log("filteredArr", filteredArr)
+          console.log("bottomProducts:", await bottomProducts(collectionId))
           let totalArr = filteredArr.concat(await bottomProducts(collectionId))
-          console.log("totalArr", totalArr)
-          const dataArr = totalArr.map(x => x.productId) // dataArr needs to have restricted products at the end of it 
+          
+          const dataArr = totalArr.map(x => +x.productId) // dataArr needs to have restricted products at the end of it 
 
+          console.log("dataArr", dataArr)
           // order the smart collection
           let orderResult = await axios({
             method: 'put',
@@ -189,7 +192,7 @@ module.exports = {
             },
             headers: { 'X-Shopify-Access-Token': shop.access_token, 'Content-Type': 'application/json' }
           })
-          // console.log(orderResult)
+          //console.log(orderResult)
         } else { // if custom
           console.log("existing custom collection")
           // filter(sortedArr)

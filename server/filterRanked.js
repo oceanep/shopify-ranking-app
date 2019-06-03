@@ -4,14 +4,30 @@ const db = require('./db')
 
 // if smart, concat db restricted to end
 
+// filtered array isnt pulling from the db rn
+
 module.exports = {
     filterRanked: async (collectionId, sortedArr, restrictedArr=[]) => {
     let queryText = 'SELECT * FROM restricted_items WHERE collection_id = ($1)'
-    let result = await db.query(queryText, [collectionId])
-    
-    if (!result) { // no restricted product array
-        // if no restricted product array in db, use restrictedArr
-        return sortedArr
+    let restrictedResult = await db.query(queryText, [collectionId])
+
+    if (restrictedResult.length !== 0) { // restricted product array exists (collection exists)
+        const filtered = sortedArr.filter(function(item) {
+            let val = restrictedResult.find(e => {
+                console.log("iteration", e.product_id, item.productId, e.product_id == item.productId)
+                return e.product_id == item.productId
+            });
+            console.log("val", val)
+            return val === undefined
+            
+        }) 
+        
+        console.log("FILTERED", filtered)
+        // sortedArr [{productId: 1, rank: 0}]
+        // restrictedResult [{collection_id: 1, product_id: 1}, {collection_id: 2, product_id: 1}]
+        // want [{productId: 2, rank:0}]
+
+        return filtered
     } else {
         if (restrictedArr.length !== 0) { // no restricted arr, new ranked collection
             // const restrictedProducts = result.map(x => x.product_id)
