@@ -1,14 +1,20 @@
 import React from "react";
+import axios from "axios";
 import {Page, PageActions, Thumbnail, ResourceList, Card, TextStyle, Modal, TextContainer, RangeSlider} from "@shopify/polaris";
 
-const later = (delay, value) =>
-    new Promise(resolve => setTimeout(resolve, delay, value));
+const isEmpty = (obj) => {
+  for(var key in obj) {
+      if(obj.hasOwnProperty(key))
+          return false;
+  }
+  return true;
+}
 
 export default class CollectsList extends React.Component {
   constructor(props){
     super(props)
     this.state = {
-      collectionInfo: { id: this.props.collectionId },
+      collectionInfo: this.props.collection,
       collects: [''],
       selectedItems: [],
       itemsToDelete: [],
@@ -17,22 +23,20 @@ export default class CollectsList extends React.Component {
       modalActive: false,
       modalType: '',
       new: this.props.new,
-      timeInterval: 7
+      timeInterval: this.props.collection.timeRange ? this.props.collection.timeRange : 7
     }
   }
 
   componentDidMount() {
-    later(1000, [
-        {id: '134u2y34uy34', url: '2112771129411', name: 'item1'},
-        {id: '234iuj3kjk32', url: '2112771129411', name: 'item2'},
-        {id: '1232u4iu53iu', url: '2112771129411', name: 'item3'}
-      ]).then(
-        collects => {
-          console.log(collects)
-          this.setState({collects, loading: false})
-        }
-      ).catch(err => console.log(err))
-      //if timeInterval ? setState({timeInterval})
+
+    axios.get(`https://56a2492b.ngrok.io/getShopifyProducts/${this.state.collectionInfo.id}`)
+    .then( res => {
+      console.log(res.data)
+      isEmpty(res.data) ? this.setState({collects: [], loading: false}) : this.setState({collects: res.data.products, loading: false})
+    })
+    .catch(err => {
+      console.log(err)
+    })
   }
 
   handleTimeInterval = (timeInterval) => {
@@ -85,21 +89,22 @@ export default class CollectsList extends React.Component {
   }
 
   renderItem = (item) => {
-    const {id, url, name} = item;
-    const media = <Thumbnail customer size="medium" src={url} alt={name} />;
+    const {id, title, imgSrc} = item
+    console.log('imgSrc', imgSrc)
+    const media = <Thumbnail size="small" source={imgSrc} alt={title} />
 
     return (
       <ResourceList.Item
         id={id}
         media={media}
-        accessibilityLabel={`Product ${name}`}
+        accessibilityLabel={`Product ${title}`}
         persistActions
       >
         <h3>
-          <TextStyle variation="strong">{name}</TextStyle>
+          <TextStyle variation="strong">{title}</TextStyle>
         </h3>
       </ResourceList.Item>
-    );
+    )
   }
 
   renderModal = () => {

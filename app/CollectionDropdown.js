@@ -1,4 +1,5 @@
 import React from "react";
+import axios from "axios";
 import {Page, PageActions, Button, Select} from "@shopify/polaris";
 
 const later = (delay, value) =>
@@ -9,6 +10,8 @@ export default class CollectionDropdown extends React.Component {
     super(props)
     this.state = {
       selected: '',
+      selectedIndex: '',
+      collectionObjs: [],
       collections: [],
       newRanking: this.props.new
     }
@@ -18,28 +21,31 @@ export default class CollectionDropdown extends React.Component {
     //check newRanking and decide which collections api to ping
     //if new, ping middleware to ping all Collections
     //if not, ping middleware for all ranked collections
-    later(1000, ['collection1','collection2','collection3']).then(
-      res => {
-        console.log(res)
-        this.setState({collections: this.mapCollections(res)})
-      }
-    ).catch(err => console.log(err))
+    let url = this.state.newRanking? 'getShopifyCollections' : 'getAllRankedCollections'
+    axios.get(`https://56a2492b.ngrok.io/${url}`)
+    .then( res => {
+      console.log(this.state.newRanking? res.data.collections: res.data)
+      this.setState({collectionObjs: this.state.newRanking? res.data.collections: res.data})
+      this.setState({collections: this.mapCollections( this.state.newRanking? res.data.collections: res.data)})
+    })
+    .catch(err => {
+      console.log(err)
+    })
   }
 
   //map results from api into usable array of collection names w/ ids
   mapCollections = collections => {
-    return collections.map(collection => ({label: collection, value: collection, id: collection}))
+    return collections.map(collection => ({label: collection.title, value: collection.id}))
   }
 
   handleChange = (newValue) => {
     this.setState({selected: newValue})
   }
 
-  selectCollection = (e) => {
-    e.preventDefault()
-    let id = this.state.collections.find(collection => this.state.selected == collection.value).id
-    console.log(this.state.selected, id)
-    this.props.setCollectionId(id)
+  selectCollection = () => {
+    let c = this.state.collectionObjs.find(collection => this.state.selected == collection.id)
+    console.log("selected collection obj",this.state.selected, c)
+    this.props.setCollection(c)
     this.props.onSelect('collects')
   }
 
