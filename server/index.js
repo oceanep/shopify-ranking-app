@@ -74,7 +74,7 @@ app.use(
 
       ctx.cookies.set('shopOrigin', shop, { httpOnly: false });
       console.log("AUTH", shop, accessToken)
-      
+
       ctx.redirect("/");
     }
   })
@@ -109,7 +109,7 @@ app.use(async (ctx, next) => {
   await next();
   if (ctx.status === 404) {
     return ctx.render("app", {
-      title: "Delete Me",
+      title: "Product Ranking",
       apiKey: ctx.session.accessToken,
       shop: ctx.session.shop,
     });

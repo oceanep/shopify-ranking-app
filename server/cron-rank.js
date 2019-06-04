@@ -62,6 +62,9 @@ cron.schedule('0 4 * * *', async () => {
       let obj = rank.productRank(collectionId, timeInterval)
       console.log("ranked in cron", obj)
       // (will rank all products in collection, since we deleted from db filter won't find it + no current restriced array)
+      // change back
+      const restoreQuery = 'UPDATE restricted_items SET restore = ($1) WHERE collection_id = ($2) RETURNING *'
+      const restoreResult = await db.query(restoreQuery, [false, collectionId])
     } else {
       // call rank normally (know if smart or not, know existing for sure)
       let regRank = rank.productRank(collectionId, timeInterval)
@@ -70,6 +73,6 @@ cron.schedule('0 4 * * *', async () => {
   });
 
 }, {
-  scheduled: true, 
+  scheduled: true,
   timezone: "Asia/Tokyo"
 });

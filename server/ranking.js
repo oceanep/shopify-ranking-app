@@ -6,34 +6,6 @@ const userAuth = require('./getUser')
 const axios = require('axios');
 const filter = require('./filterRanked')
 
-const collectionInfo = async (id, accessToken) => {
-  const res = await axios({
-    url: `https://kabir-test.myshopify.com/admin/api/graphql.json`,
-    method: 'post',
-    headers: { 'X-Shopify-Access-Token': accessToken },
-    data: {
-        query: `
-          {
-            collection(id:"gid://shopify/Collection/${id}") {
-                id
-                title
-                ruleSet {
-                  rules {
-                    column
-                    condition
-                    relation
-                  }
-                }
-            }
-          }
-        `
-    }
-  })
-  
-  return res.data.data.collection
-
-}
-
 const bottomProducts = async (collectionId) => {
   let queryText = 'SELECT * FROM restricted_items WHERE collection_id = ($1)'
   let result = await db.query(queryText, [collectionId])
@@ -46,7 +18,7 @@ const bottomProducts = async (collectionId) => {
 }
 
 module.exports = {
-  productRank: async (collectionId, timeInterval, restrictedArr) => { // needs to take what is being POSTed
+  productRank: async (collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr) => { // needs to take what is being POSTed
       console.log("product rank")
       //  get shop
       const shop = await userAuth.getUser();
@@ -60,7 +32,7 @@ module.exports = {
       // const url = `https://kabir-test.myshopify.com/admin/api/2019-04/smart_collections/101723930691.json`
       //  query shopify
       const res = await axios.get(url, config) //collection data.collects[].productId
-      
+
       console.log("type", res.data)
       const now = moment.utc(new Date())
       console.log('now', now)
@@ -71,7 +43,7 @@ module.exports = {
       // console.log("\nShopify response", res.data.collects)
       console.log(`\nStartDay ${startDay} EndDay ${endDay}`)
       console.log(startDay)
-      //  query database directly 
+      //  query database directly
       const arr = await Promise.all(res.data.collects.map( async collect => {
         console.log(typeof collect.product_id)
         let id = collect.product_id.toString()
@@ -93,12 +65,12 @@ module.exports = {
 
       // get name of collection
 
-      if (collectionResult.length === 0) { 
-        let oldCollection = await collectionInfo(collectionId, shop.access_token)
-        let oldTitle = oldCollection.title // rename `RANKED ${title}`
+      if (collectionResult.length === 0) {
 
-        if (oldCollection.ruleSet) { 
-          let smartRules = oldCollection.ruleSet.rules
+        let oldTitle = collectionTitle
+
+        if (smartCollection) { // if isSmartCollection
+          let smartRules = ruleSet.rules
 
           console.log("new smart collection")
           let filteredArr = await filter.filterRanked(collectionId, sortedArr, restrictedArr)
@@ -130,13 +102,14 @@ module.exports = {
             },
             headers: { 'X-Shopify-Access-Token': shop.access_token, 'Content-Type': 'application/json' }
           })
-          console.log(orderResult)
+          console.log(orderResult.data)
 
           return {
             newCollectionId: newCollectionId,
             title: title,
-            smartCollection: true, 
+            smartCollection: true,
             new: true,
+            timeInterval: timeInterval,
             restrictedArr: restrictedArr
           }
 
@@ -164,31 +137,31 @@ module.exports = {
             data: dataObj,
             headers: { 'X-Shopify-Access-Token': shop.access_token, 'Content-Type': 'application/json' }
           })
-          console.log(createCustomCollection)
-          
+          console.log(createCustomCollection.data)
+
           const newCollectionId = createResult.data.smart_collection.id
           const title = createResult.data.smart_collection.title
 
           return {
             newCollectionId: newCollectionId,
             title: title,
-            smartCollection: false, 
+            smartCollection: false,
             new: true,
             restrictedArr: restrictedArr
           }
 
         }
 
-      } else { 
+      } else {
         if (collectionResult[0].smart_collection) { // if smart collection
           console.log("existing smart collection")
-          
+
           let filteredArr = await filter.filterRanked(collectionId, sortedArr)
           console.log("filteredArr", filteredArr)
           console.log("bottomProducts:", await bottomProducts(collectionId))
           let totalArr = filteredArr.concat(await bottomProducts(collectionId))
-          
-          const dataArr = totalArr.map(x => +x.productId) 
+
+          const dataArr = totalArr.map(x => +x.productId)
 
           console.log("dataArr", dataArr)
           let orderResult = await axios({
@@ -199,15 +172,15 @@ module.exports = {
             },
             headers: { 'X-Shopify-Access-Token': shop.access_token, 'Content-Type': 'application/json' }
           })
-          console.log("order result", orderResult)
+          console.log("order result", orderResult.data)
           return {
             newCollectionId: collectionId,
             title: null,
-            smartCollection: true, 
+            smartCollection: true,
             new: false,
             restrictedArr: restrictedArr
           }
-          
+
         } else { // if custom
           console.log("existing custom collection")
           let restrictedArr = []
@@ -217,7 +190,7 @@ module.exports = {
           return {
             newCollectionId: collectionId,
             title: null,
-            smartCollection: false, 
+            smartCollection: false,
             new: false,
             restrictedArr: restrictedArr
           }

@@ -1,6 +1,7 @@
 const ShopifyAPIClient = require("shopify-api-node");
 const axios = require('axios');
 const functions = require('../functions');
+const routeHelpers = require('../routeHelpers');
 const db = require('../db')
 const router = require('koa-router')();
 const koaBody = require('koa-body');
@@ -8,42 +9,33 @@ const ranking = require('../ranking.js')
 
 module.exports = (router) => {
   router
-    .post("/rankProducts", koaBody(), async ctx => {
+    .post("/helloWorld", async ctx => {
+      console.log('hello')
+    })
+    .post("/rankProducts", async ctx => {
       console.log("rank products")
-      const body = JSON.parse(ctx.request.body)
-      const {collectionId, timeInterval, restrictedArr} = body
-      const res = await ranking.productRank(collectionId, timeInterval, restrictedArr) // filter happens in here, api call happens here
+      const body = ctx.request.body
+      const {collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr} = body
+      console.log('rankProducts body', collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr)
+      const res = await ranking.productRank(collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr) // filter happens in here, api call happens here
       // res variable will have POST request result (send back) collectionId, restricted products, timeInterval etc. anything that needs db calls
       // make needed route calls using POST data on frontend {collectionId, restrictedArr, timeInterval}
       // save to collection db (collectionId, collectionName, timeRange, false])
+      const final = await routeHelpers.saveNewCollection(res)
 
-      ctx.body = res
+
+      // ctx.body = {collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr}
+      ctx.body = final
     })
-    .post("/newSaveCollection", koaBody(), async ctx => {
-      // {collectionId, collectionName, timeRange, restore}
-      // possible time range values: '7', '30', '90', '180'
-      try {
-        const body = JSON.parse(ctx.request.body)
-        console.log(body)
-        const {collectionId, collectionName, timeRange} = body
-        const queryText = 'INSERT INTO collections (collection_id, collection_name, time_range, restore) VALUES($1, $2, $3, $4) RETURNING *'
-        const result = await db.query(queryText, [collectionId, collectionName, timeRange, false])
-        console.log(result)
-        ctx.body = result
-      }catch(err) {
-        ctx.body = err
-      }
-    })
-    .put("/updateCollection", koaBody(), async ctx => {
+    .put("/updateCollection", async ctx => {
       // {collectionId, collectionName, timeRange}
       // possible time range values: '7', '30', '90', '180'
       try {
-        const body = JSON.parse(ctx.request.body)
-        console.log(body)
-        const {collectionId, collectionName, timeRange, restore = false} = body
-        const queryText = 'UPDATE collections SET collection_name = ($2), time_range = ($3), restore = ($4)  WHERE collection_id = ($1) RETURNING *'
-        const result = await db.query(queryText, [collectionId, collectionName, timeRange, restore])
-        console.log(result)
+        const body = ctx.request.body
+        const {collectionId, smartCollection, timeInterval, restore} = body
+        const queryText = 'UPDATE collections SET time_range = ($2), restore = ($3)  WHERE collection_id = ($1) RETURNING *'
+        const result = await db.query(queryText, [collectionId, timeInterval, restore])
+        console.log("Updated Collection", result)
         ctx.body = result
       }catch(err) {
         ctx.body = err
@@ -59,7 +51,8 @@ module.exports = (router) => {
             title: collection.collection_name,
             id: collection.collection_id,
             isSmartCollection: collection.smart_collection,
-            timeRange: collection.time_range
+            timeRange: collection.time_range,
+            restore: collection.restore
           }
         ))
         console.log(collections)
@@ -69,23 +62,9 @@ module.exports = (router) => {
         ctx.body = err
       }
     })
-    .post("/isSmartCollection", koaBody(), async ctx => {
-      // { collectionId }
-      try {
-        const body = JSON.parse(ctx.request.body)
-        console.log(body)
-        const {collectionId} = body
-        const queryText = 'SELECT * FROM collections WHERE collection_id = ($1)'
-        const result = await db.query(queryText, [collectionId])
-        console.log(result)
-        ctx.body = result[0].smart_collection
-      } catch(err) {
-        ctx.body = err
-      }
-    })
     .post("/restrictProducts", koaBody(), async ctx => {
       // {collection_id, [product_id1, product_id2, product_id3]}
-      // restrict and delete from shopify 
+      // restrict and delete from shopify
       try {
         console.log("restrict products")
         const body = JSON.parse(ctx.request.body)
@@ -120,11 +99,11 @@ module.exports = (router) => {
         ctx.body = err
       }
     })
-    .post("/deleteRankedCollection", koaBody(), async ctx => {
+    .post("/deleteRankedCollection", async ctx => {
       // {collection_id}
       // delete collection from tables (2 tables)
       try {
-        const body = JSON.parse(ctx.request.body)
+        const body = ctx.request.body
         console.log(body)
         const {collectionId} = body
         const collectionQuery = 'DELETE FROM collections WHERE collection_id = ($1) RETURNING *'

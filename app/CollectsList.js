@@ -27,6 +27,7 @@ export default class CollectsList extends React.Component {
       modalActive: false,
       modalType: '',
       new: this.props.new,
+      restore: this.props.collection.restore,
       timeInterval: this.props.collection.timeRange ? this.props.collection.timeRange : 7
     }
 
@@ -93,13 +94,31 @@ export default class CollectsList extends React.Component {
   handleCollectionDelete = () => {
     //hit collection delete endpoint on backend and shopify
     console.log('handle Collection delete')
+    axios({
+      url:'https://56a2492b.ngrok.io/deleteRankedCollection',
+      method:'post',
+      data: {
+        collectionId: this.state.collectionInfo.id
+      }
+    })
+    .then( res => console.log(res))
+    .catch( err => console.log(err))
     this.handleModalChange('')
     this.props.onSelect('delete')
   }
 
   handleItemsDelete = () => {
     //set list of items to send back for deletion on save/finish
-    this.setState({ itemsToDelete: this.state.selectedItems})
+    const allCollects = this.state.allCollects.filter( collect => {
+      return !this.state.selectedItems.includes(collect.id)
+    })
+    const itemsToDelete = this.state.selectedItems
+    this.setState({
+      itemsToDelete,
+      allCollects,
+      currentCollects: allCollects.slice(0,50),
+      selectedItems: []
+    })
     this.handleModalChange('')
     console.log('handle item deletion')
   }
@@ -111,18 +130,86 @@ export default class CollectsList extends React.Component {
 
   handleRestore = () => {
     //hit restore endpoint on backend
-    console.log('handle restore')
+    //send id, isSmartCollection, timeInterval to the update endpoint
+    const {id, isSmartCollection} = this.state.collectionInfo
+    const timeInterval = this.state.timeInterval
+    console.log('restore deleted products', id, isSmartCollection, timeInterval)
+    this.setState({restore: true})
+    axios({
+      url:'https://56a2492b.ngrok.io/updateCollection',
+      method:'put',
+      data: {
+        collectionId: id,
+        smartCollection: isSmartCollection,
+        timeInterval: timeInterval,
+        restore: true
+      }
+    })
+    .then( res => console.log(res))
+    .catch( err => console.log(err))
+
     this.handleModalChange('')
     this.props.onSelect('restore')
   }
 
   handleSave = () => {
+    console.log('handleSave')
     if(this.state.new) {
       //send collection id, timeInterval, type, itemstodelete array, and rules to create endpoint on backend
+      const {id, isSmartCollection, ruleSet, title} = this.state.collectionInfo
+      const timeInterval = this.state.timeInterval
+      const restrictedArr = this.state.itemsToDelete
+      console.log('save info', id, isSmartCollection, ruleSet, title, timeInterval, restrictedArr)
+      axios({
+        url:'https://56a2492b.ngrok.io/rankProducts',
+        method:'post',
+        data: {
+          collectionId: id,
+          smartCollection: isSmartCollection,
+          ruleSet: ruleSet,
+          collectionTitle: title,
+          timeInterval: timeInterval,
+          restrictedArr: restrictedArr
+        }
+      })
+      .then( res => console.log(res.data))
+      .catch( err => console.log(err))
       this.props.onSelect('complete')
     }else{
-      //send id, timeInterval to the update endpoint
+      //send id, isSmartCollection, timeInterval to the update endpoint
+      const {id, isSmartCollection} = this.state.collectionInfo
+      const timeInterval = this.state.timeInterval
+      const restrictedArr = this.state.itemsToDelete
+      const restore = this.state.restore
+      console.log('update info', id, isSmartCollection, timeInterval, restrictedArr)
+
+      axios({
+        url:'https://56a2492b.ngrok.io/updateCollection',
+        method:'put',
+        data: {
+          collectionId: id,
+          smartCollection: isSmartCollection,
+          timeInterval: timeInterval,
+          restore: restore
+        }
+      })
+      .then( res => {
+        console.log(res.data)
+
+        axios({
+          url:'https://56a2492b.ngrok.io/restrictProducts',
+          method:'post',
+          data: {
+            collectionId: id,
+            restrictedProductArr: restrictedArr
+          }
+        })
+        .then( res => console.log(res))
+        .catch( err => console.log(err))
+      })
+      .catch( err => console.log(err))
       //if items to delete? send items to delete endpoint on backend
+
       this.props.onSelect('update')
     }
   }
