@@ -11,12 +11,16 @@ module.exports = (router) => {
     .post("/rankProducts", koaBody(), async ctx => {
       console.log("rank products")
       const body = JSON.parse(ctx.request.body)
-      const {collectionId, timeInterval} = body
-      const res = await ranking.productRank(collectionId, timeInterval)
+      const {collectionId, timeInterval, restrictedArr} = body
+      const res = await ranking.productRank(collectionId, timeInterval, restrictedArr) // filter happens in here, api call happens here
+      // res variable will have POST request result (send back) collectionId, restricted products, timeInterval etc. anything that needs db calls
+      // make needed route calls using POST data on frontend {collectionId, restrictedArr, timeInterval}
+      // save to collection db (collectionId, collectionName, timeRange, false])
+
       ctx.body = res
     })
     .post("/newSaveCollection", koaBody(), async ctx => {
-      // {collectionId, collectionName, timeRange, products}
+      // {collectionId, collectionName, timeRange, restore}
       // possible time range values: '7', '30', '90', '180'
       try {
         const body = JSON.parse(ctx.request.body)
@@ -80,7 +84,8 @@ module.exports = (router) => {
       }
     })
     .post("/restrictProducts", koaBody(), async ctx => {
-      // {collection_id, [id1, id2, id3]}
+      // {collection_id, [product_id1, product_id2, product_id3]}
+      // restrict and delete from shopify 
       try {
         console.log("restrict products")
         const body = JSON.parse(ctx.request.body)
@@ -93,6 +98,7 @@ module.exports = (router) => {
           return res
         }))
         console.log(result)
+        // delete_from_shopify(collection_id, restrictedProductArr)
         ctx.body = result
 
       }catch(err) {
@@ -114,7 +120,7 @@ module.exports = (router) => {
         ctx.body = err
       }
     })
-    .post("/stopWatchingCollection", koaBody(), async ctx => {
+    .post("/deleteRankedCollection", koaBody(), async ctx => {
       // {collection_id}
       // delete collection from tables (2 tables)
       try {
