@@ -6,7 +6,6 @@ const userAuth = require('./getUser')
 const axios = require('axios');
 const filter = require('./filterRanked')
 
-// check if smart collection
 const collectionInfo = async (id, accessToken) => {
   const res = await axios({
     url: `https://kabir-test.myshopify.com/admin/api/graphql.json`,
@@ -34,14 +33,8 @@ const collectionInfo = async (id, accessToken) => {
   return res.data.data.collection
 
 }
-// const createSmartCollection = () => {}
-// const createCustomCollection = () => {}
-// const updateSmartCollection = () => {}
-// const updateCustomCollection = () => {}
+
 const bottomProducts = async (collectionId) => {
-  // make db call
-  // change db output to match object array of the filtered array
-  // contact them
   let queryText = 'SELECT * FROM restricted_items WHERE collection_id = ($1)'
   let result = await db.query(queryText, [collectionId])
   console.log("result", result)
@@ -53,7 +46,7 @@ const bottomProducts = async (collectionId) => {
 }
 
 module.exports = {
-  productRank: async (collectionId, timeInterval) => { // old collection id
+  productRank: async (collectionId, timeInterval, restrictedArr) => { // needs to take what is being POSTed
       console.log("product rank")
       //  get shop
       const shop = await userAuth.getUser();
@@ -103,14 +96,11 @@ module.exports = {
       if (collectionResult.length === 0) { 
         let oldCollection = await collectionInfo(collectionId, shop.access_token)
         let oldTitle = oldCollection.title // rename `RANKED ${title}`
-        let restrictedArr = ['2112775422019']
+
         if (oldCollection.ruleSet) { 
-          let smartRules = oldCollection.ruleSet.rules // smartRules.column
+          let smartRules = oldCollection.ruleSet.rules
+
           console.log("new smart collection")
-          // take given smart rules and use those in api post
-          // filter with sent back array (change filter function to include this)
-          // use restricted items array -> filter out in ranking (filter to bottom)
-          // filter(sortedArr, restrictedArr)
           let filteredArr = await filter.filterRanked(collectionId, sortedArr, restrictedArr)
           // console.log(filteredArr)
           let dataObj = {
@@ -129,6 +119,7 @@ module.exports = {
             headers: { 'X-Shopify-Access-Token': shop.access_token, 'Content-Type': 'application/json' }
           })
           const newCollectionId = createResult.data.smart_collection.id
+          const title = createResult.data.smart_collection.title
           const dataArr = filteredArr.map(x => x.productId)
           // order the smart collection
           let orderResult = await axios({
@@ -141,9 +132,16 @@ module.exports = {
           })
           console.log(orderResult)
 
+          return {
+            newCollectionId: newCollectionId,
+            title: title,
+            smartCollection: true, 
+            new: true,
+            restrictedArr: restrictedArr
+          }
+
         } else { // if custom
           console.log("new custom collection")
-          // filter(sortedArr)
           let filteredArr = await filter.filterRanked(collectionId, sortedArr, restrictedArr)
           console.log(filteredArr)
           let collects = filteredArr.map((product, i) => {
@@ -167,23 +165,32 @@ module.exports = {
             headers: { 'X-Shopify-Access-Token': shop.access_token, 'Content-Type': 'application/json' }
           })
           console.log(createCustomCollection)
-          // use restricted items array -> filter out in ranking -> delete
+          
+          const newCollectionId = createResult.data.smart_collection.id
+          const title = createResult.data.smart_collection.title
+
+          return {
+            newCollectionId: newCollectionId,
+            title: title,
+            smartCollection: false, 
+            new: true,
+            restrictedArr: restrictedArr
+          }
 
         }
 
       } else { 
         if (collectionResult[0].smart_collection) { // if smart collection
           console.log("existing smart collection")
-          // filter(sortedArr)
+          
           let filteredArr = await filter.filterRanked(collectionId, sortedArr)
           console.log("filteredArr", filteredArr)
           console.log("bottomProducts:", await bottomProducts(collectionId))
           let totalArr = filteredArr.concat(await bottomProducts(collectionId))
           
-          const dataArr = totalArr.map(x => +x.productId) // dataArr needs to have restricted products at the end of it 
+          const dataArr = totalArr.map(x => +x.productId) 
 
           console.log("dataArr", dataArr)
-          // order the smart collection
           let orderResult = await axios({
             method: 'put',
             url: `https://${shop.shop}/admin/api/2019-04/smart_collections/${collectionId}/order.json`,
@@ -192,23 +199,32 @@ module.exports = {
             },
             headers: { 'X-Shopify-Access-Token': shop.access_token, 'Content-Type': 'application/json' }
           })
-          //console.log(orderResult)
+          console.log("order result", orderResult)
+          return {
+            newCollectionId: collectionId,
+            title: null,
+            smartCollection: true, 
+            new: false,
+            restrictedArr: restrictedArr
+          }
+          
         } else { // if custom
           console.log("existing custom collection")
-          // filter(sortedArr)
-          // (pass filtered as true)
+          let restrictedArr = []
+          let filteredArr = await filter.filterRanked(collectionId, sortedArr, restrictedArr, true, shop.access_token)
+          console.log(filteredArr)
+
+          return {
+            newCollectionId: collectionId,
+            title: null,
+            smartCollection: false, 
+            new: false,
+            restrictedArr: restrictedArr
+          }
+
         }
-        // add to db, make db calls (add restricted products, add to our own collections)
 
       }
-
-      // if (!collectionResult[0].restore) {
-      //   const final = await filter.filterRanked(collectionId, sortedArr)
-      //   console.log('final sortedArr after filtering', final)
-      //   return final
-      // }
-      // console.log('sorted arr', sortedArr)
-      return sortedArr
 
   },
 }

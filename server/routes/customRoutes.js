@@ -10,8 +10,8 @@ module.exports = (router) => {
     .post("/rankProducts", koaBody(), async ctx => {
       console.log("rank products")
       const body = JSON.parse(ctx.request.body)
-      const {collectionId, timeInterval} = body
-      const res = await ranking.productRank(collectionId, timeInterval) // filter happens in here, api call happens here
+      const {collectionId, timeInterval, restrictedArr} = body
+      const res = await ranking.productRank(collectionId, timeInterval, restrictedArr) // filter happens in here, api call happens here
       // res variable will have POST request result (send back) collectionId, restricted products, timeInterval etc. anything that needs db calls
       // make needed route calls using POST data on frontend {collectionId, restrictedArr, timeInterval}
       // save to collection db (collectionId, collectionName, timeRange, false])
@@ -111,7 +111,7 @@ module.exports = (router) => {
         ctx.body = err
       }
     })
-    .post("/stopWatchingCollection", koaBody(), async ctx => {
+    .post("/deleteRankedCollection", koaBody(), async ctx => {
       // {collection_id}
       // delete collection from tables (2 tables)
       try {

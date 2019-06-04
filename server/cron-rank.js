@@ -4,6 +4,33 @@ const rank = require('./ranking')
 const userAuth = require('./getUser')
 const axios = require('axios');
 
+const add_to_shopify_collection = async (collectionId, productIdArr, accessToken) => {
+  const gqlProductArr = await productIdArr.map(id => `gid://shopify/Product/${id}`)
+  console.log("gql arr", gqlProductArr)
+  console.log(accessToken)
+  const res = await axios({
+      url: `https://kabir-test.myshopify.com/admin/api/graphql.json`,
+      method: 'post',
+      headers: { 'X-Shopify-Access-Token': accessToken },
+      data: {
+          query: `
+            mutation {
+              collectionAddProducts(id: "gid://shopify/Collection/${collectionId}", productIds: ${gqlProductArr}) {
+                  job {
+                    id
+                  }
+                  userErrors {
+                    field
+                    message
+                  }
+                }
+            }
+          `
+      }
+    })
+  return res.data
+}
+
 cron.schedule('0 4 * * *', async () => {
 
   const allRankedCollections = await db.query(`SELECT * FROM collections`)
@@ -18,59 +45,27 @@ cron.schedule('0 4 * * *', async () => {
     let collectionId = collection.collection_id
     let timeInterval = collection.time_range
     let smartCollection = collection.smart_collection
-    let sortedArr = await rank.productRank(collectionId, timeInterval)
-    console.log(`sortedArr ${sortedArr} for collection ${collectionId}`)
-    if (smartCollection) {
-      // change sort order to manual
-      let result = sortedArr.map(x => x.productId);
-      await axios({
-        method: 'put',
-        url: `https://${auth.shop}/admin/api/2019-04/smart_collections/${collectionId}/order.json`,
-        data: {
-          "products": result
-        },
-        auth: {
-          username: appUsername,
-          password: appPassword
-      }
-      })
-        .then(function (message) {
-          console.log("smart collection updated");
-        })
-        .catch(function (error) {
-          console.log("smart collection error");
-        });
-
-    } else { // custom collection
-      const putArr = sortedArr.map(item => {
-        return {
-          "product_id": +item.productId,
-          "position": +item.rank
-        };
-      });
-      console.log(putArr)
-      let collectionObj = {
-        "custom_collection": {
-          "id": +collectionId,
-          "collects": putArr
-        }
-      }
-      console.log(collectionObj)
-      await axios({
-        method: 'put',
-        url: `https://${auth.shop}/admin/api/2019-04/custom_collections/${collectionId}.json`,
-        data: collectionObj,
-        auth: {
-          username: appUsername,
-          password: appPassword
-      }
-      })
-        .then(function (message) {
-          console.log("custom collection updated");
-        })
-        .catch(function (error) {
-          console.log("custom collection error");
-        });
+    let restore = collection.restore
+    // console.log(`sortedArr ${sortedArr} for collection ${collectionId}`)
+    if (restore) {
+      // grab dbRestrictedArr
+      const queryText = 'SELECT * FROM restricted_items WHERE collection_id = ($1)'
+      const dbRestrictedArr = await db.query(queryText, [collectionId])
+      console.log(dbRestrictedArr)
+      // add products back to collection (gql)
+      const addBack = await add_to_shopify_collection(collectionId, dbRestrictedArr, auth.access_token)
+      // delete from db
+      const deleteText = 'DELETE FROM restricted_items WHERE collection_id = ($1) RETURNING *'
+      const deleteResult = await db.query(deleteText, [collectionId])
+      console.log(deleteResult)
+      // call rank
+      let obj = rank.productRank(collectionId, timeInterval)
+      console.log("ranked in cron", obj)
+      // (will rank all products in collection, since we deleted from db filter won't find it + no current restriced array)
+    } else {
+      // call rank normally (know if smart or not, know existing for sure)
+      let regRank = rank.productRank(collectionId, timeInterval)
+      console.log("ranked normally", regRank)
     }
   });
 
