@@ -1,4 +1,5 @@
 const ShopifyAPIClient = require("shopify-api-node");
+const axios = require('axios');
 const functions = require('../functions');
 const db = require('../db')
 const router = require('koa-router')();
@@ -49,8 +50,16 @@ module.exports = (router) => {
       try {
         console.log("getall ranked")
         const result = await db.query(`SELECT * FROM collections`)
-        console.log(result)
-        ctx.body = result
+        const collections = result.map( collection => (
+          {
+            title: collection.collection_name,
+            id: collection.collection_id,
+            isSmartCollection: collection.smart_collection,
+            timeRange: collection.time_range
+          }
+        ))
+        console.log(collections)
+        ctx.body = collections
         result ? ctx.response.status = 200 : ctx.response.status = 418
       }catch(err) {
         ctx.body = err
@@ -146,5 +155,102 @@ module.exports = (router) => {
             );
           },
         );
-    });
+    })
+    // Define middleware routes for shopify api hits from React front endpoint
+    .get("/getShopifyProducts/:id", koaBody(), async ctx => {
+      const { shop, accessToken } = ctx.session
+      const params = ctx.params
+      console.log('params',params)
+      //get all collection's products
+      try {
+        console.log("get all collection's products")
+        console.log('shop, access', shop, accessToken)
+        let res = await axios({
+          url: `https://${shop}/admin/api/graphql.json`,
+          method: 'post',
+          headers: { 'X-Shopify-Access-Token': accessToken },
+          data: {
+            query: `{
+              collection(id: "gid://shopify/Collection/${params.id}") {
+                products(first:250){
+                  edges{
+                    cursor
+                    node{
+                      id
+                      title
+                      featuredImage{
+                        originalSrc
+                      }
+                    }
+                  }
+                }
+              }
+            }`
+          }
+        })
+        console.log(res.data.data)
+        const products = res.data.data.collection.products.edges.map( product => (
+          {
+            id: product.node.id.slice(23),
+            title: product.node.title,
+            imgSrc: product.node.featuredImage ? product.node.featuredImage.originalSrc : ''
+          }
+        ))
+        console.log('products',products)
+        ctx.body = { products }
+        res ? ctx.response.status = 200 : ctx.response.status = 418
+      }catch(err) {
+        ctx.body = err
+      }
+    })
+    .get("/getShopifyCollections", koaBody(), async ctx => {
+      const { shop, accessToken } = ctx.session;
+      //get all shopify collections
+      try {
+        console.log("getall shopify collections")
+        console.log('shop, access', shop, accessToken)
+        let res = await axios({
+            url: `https://${shop}/admin/api/graphql.json`,
+            method: 'post',
+            headers: { 'X-Shopify-Access-Token': accessToken },
+            data: {
+                query: `{
+                  collections(first:250) {
+                    edges {
+                      cursor
+                      node {
+                        id
+                        title
+                        ruleSet{
+                            rules{
+                              column
+                              condition
+                              relation
+                            }
+                          }
+                        }
+                      }
+                      pageInfo {
+                      hasNextPage
+                    }
+                  }
+                }`
+            }
+        })
+        console.log(res.data.data)
+        const collections = res.data.data.collections.edges.map( collection => (
+          {
+            title: collection.node.title,
+            id: collection.node.id.slice(25),
+            isSmartCollection: collection.node.ruleSet ? true : false,
+            ruleSet: collection.node.ruleSet ? collection.node.ruleSet.rules : null
+          }
+        ))
+        ctx.body = { collections}
+        res ? ctx.response.status = 200 : ctx.response.status = 418
+      }catch(err) {
+        ctx.body = err
+      }
+    })
+    ;
 };

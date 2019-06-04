@@ -1,19 +1,26 @@
 import React from "react";
+import LandingContainer from "./LandingContainer.js";
 import {AppProvider, EmptyState} from "@shopify/polaris";
 
 export default class App extends React.Component {
   render() {
     return (
       <AppProvider>
-        <EmptyState
-          heading="Manage your deleted customers"
-          action={{content: "Edit deleted accounts"}}
-          //secondaryAction={{content: 'Learn more', url: 'https://help.shopify.com'}}
-          image="https://cdn.shopify.com/s/files/1/0757/9955/files/empty-state.svg"
-        >
-          <p>Lorem Ipsum</p>
-        </EmptyState>
+        <LandingContainer/>
       </AppProvider>
     );
   }
 }
+
+//home container
+//  [new] [ranked]
+//  set state {showdropdown true, previouslyranked?}
+//  new/ranked dropdown component
+//    query for collections
+//    display dropdown of collections [go]
+//      on delete setState{showdropdown false}, hit delete api
+//  set state {showdropdown false, showcollection true}
+//  collection component
+//    query for collection collects
+//    display collects
+//    [cancel] (if previouslyranked? [delete]) [restore] [save]
