@@ -1,6 +1,7 @@
 import React from "react";
 import axios from "axios";
-import {Page, PageActions, Thumbnail, ResourceList, Card, TextStyle, Modal, TextContainer, RangeSlider} from "@shopify/polaris";
+import {Page, PageActions, Thumbnail, ResourceList, Card, TextStyle, Modal, TextContainer, RangeSlider, Pagination} from "@shopify/polaris";
+import CollectsListFooter from "./CollectsListFooter/CollectsListFooter"
 
 const isEmpty = (obj) => {
   for(var key in obj) {
@@ -15,16 +16,26 @@ export default class CollectsList extends React.Component {
     super(props)
     this.state = {
       collectionInfo: this.props.collection,
-      collects: [''],
+      currentCollects: [''],
+      allCollects: [''],
       selectedItems: [],
       itemsToDelete: [],
       searchValue: '',
+      isFirstPage: true,
+      isLastPage: false,
       loading: true,
       modalActive: false,
       modalType: '',
       new: this.props.new,
       timeInterval: this.props.collection.timeRange ? this.props.collection.timeRange : 7
     }
+
+    this.handleTimeInterval = this.handleTimeInterval.bind(this)
+    this.handleSearchChange = this.handleSearchChange.bind(this)
+    this.handleSelectionChange = this.handleSelectionChange.bind(this)
+    this.handleModalChange = this.handleModalChange.bind(this)
+    this.handlePreviousPage = this.handlePreviousPage.bind(this)
+    this.handleNextPage = this.handleNextPage.bind(this)
   }
 
   componentDidMount() {
@@ -32,7 +43,12 @@ export default class CollectsList extends React.Component {
     axios.get(`https://56a2492b.ngrok.io/getShopifyProducts/${this.state.collectionInfo.id}`)
     .then( res => {
       console.log(res.data)
-      isEmpty(res.data) ? this.setState({collects: [], loading: false}) : this.setState({collects: res.data.products, loading: false})
+      isEmpty(res.data) ? this.setState({currentCollects: [], loading: false})
+        :
+        res.data.products.length > 50 ? this.setState({currentCollects: res.data.products.slice(0,50), allCollects: res.data.products, loading: false})
+          :
+          this.setState({currentCollects: res.data.products, allCollects: res.data.products, loading: false})
+
     })
     .catch(err => {
       console.log(err)
@@ -49,6 +65,29 @@ export default class CollectsList extends React.Component {
 
   handleSelectionChange = (selectedItems) => {
     this.setState({selectedItems})
+  }
+
+  handlePreviousPage = () => {
+    //compare all Collects and current Collects indexes to decide new indexes to slice for next page current Collects
+    const end = this.state.allCollects.findIndex( collect => collect.id === this.state.currentCollects[0].id )
+    const start = end - 50
+    const currentCollects = this.state.allCollects.slice(start, end)
+    console.log ("paginate previous page", start, end, currentCollects)
+    // figure out how to determine if items represent
+    // first or last page.
+    this.setState({ currentCollects, isFirstPage: end > 50 ? false : true, isLastPage: false });
+  }
+
+  handleNextPage = () => {
+    //compare all Collects and current Collects indexes to decide new indexes to slice for next page current Collects
+    const arrLength = this.state.currentCollects.length
+    const start = this.state.allCollects.findIndex( collect => collect.id === this.state.currentCollects[arrLength - 1].id ) +1
+    const end = start + 50
+    const currentCollects = this.state.allCollects.slice(start, end)
+    console.log ("paginate next page", start, end, currentCollects)
+    // Todo: figure out how to determine if items represent
+    // first or last page.
+    this.setState({ currentCollects, isFirstPage: false, isLastPage: end >= this.state.allCollects.length ? true : false });
   }
 
   handleCollectionDelete = () => {
@@ -90,7 +129,6 @@ export default class CollectsList extends React.Component {
 
   renderItem = (item) => {
     const {id, title, imgSrc} = item
-    console.log('imgSrc', imgSrc)
     const media = <Thumbnail size="small" source={imgSrc} alt={title} />
 
     return (
@@ -187,6 +225,19 @@ export default class CollectsList extends React.Component {
       />
     )
 
+    const paginationMarkup = this.state.currentCollects.length > 0
+      ? (
+        <CollectsListFooter>
+          <Pagination
+            hasPrevious={!this.state.isFirstPage}
+            hasNext={!this.state.isLastPage}
+            onPrevious={this.handlePreviousPage}
+            onNext={this.handleNextPage}
+          />
+        </CollectsListFooter>
+      )
+      : null
+
     return (
       <React.Fragment>
         {this.renderModal()}
@@ -205,15 +256,19 @@ export default class CollectsList extends React.Component {
         <Card>
           <ResourceList
             resourceName={resourceName}
-            items={this.state.collects}
+            items={this.state.currentCollects}
             renderItem={this.renderItem}
             selectedItems={this.state.selectedItems}
             onSelectionChange={this.handleSelectionChange}
             promotedBulkActions={promotedBulkActions}
             filterControl={filterControl}
+            hasMoreItems={this.state.allCollects.length > 50 ? true : false }
             loading={this.state.loading}
           />
         </Card>
+
+        {paginationMarkup}
+
         { this.state.new ?
           <PageActions
             primaryAction={{ content:'Save', onAction: this.handleSave}}
