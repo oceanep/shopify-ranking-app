@@ -41,7 +41,7 @@ export default class CollectsList extends React.Component {
 
   componentDidMount() {
 
-    axios.get(`https://56a2492b.ngrok.io/getShopifyProducts/${this.state.collectionInfo.id}`)
+    axios.get(`${process.env.API_URL}/getShopifyProducts/${this.state.collectionInfo.id}`)
     .then( res => {
       console.log(res.data)
       isEmpty(res.data) ? this.setState({currentCollects: [], loading: false})
@@ -95,16 +95,22 @@ export default class CollectsList extends React.Component {
     //hit collection delete endpoint on backend and shopify
     console.log('handle Collection delete')
     axios({
-      url:'https://56a2492b.ngrok.io/deleteRankedCollection',
+      url:`${process.env.API_URL}/deleteRankedCollection`,
       method:'post',
       data: {
         collectionId: this.state.collectionInfo.id
       }
     })
-    .then( res => console.log(res))
-    .catch( err => console.log(err))
-    this.handleModalChange('')
-    this.props.onSelect('delete')
+    .then( res => {
+      console.log(res)
+      this.handleModalChange('')
+      this.props.onSelect('delete')
+    })
+    .catch( err => {
+      console.log(err)
+      this.handleModalChange('')
+      this.props.onSelect('error')
+    })
   }
 
   handleItemsDelete = () => {
@@ -136,7 +142,7 @@ export default class CollectsList extends React.Component {
     console.log('restore deleted products', id, isSmartCollection, timeInterval)
     this.setState({restore: true})
     axios({
-      url:'https://56a2492b.ngrok.io/updateCollection',
+      url:`${process.env.API_URL}/updateCollection`,
       method:'put',
       data: {
         collectionId: id,
@@ -145,23 +151,29 @@ export default class CollectsList extends React.Component {
         restore: true
       }
     })
-    .then( res => console.log(res))
-    .catch( err => console.log(err))
-
-    this.handleModalChange('')
-    this.props.onSelect('restore')
+    .then( res => {
+      console.log(res)
+      this.handleModalChange('')
+      this.props.onSelect('restore')
+    })
+    .catch( err => {
+      console.log(err)
+      this.handleModalChange('')
+      this.props.onSelect('error')
+    })
   }
 
   handleSave = () => {
     console.log('handleSave')
+    let error = false
     if(this.state.new) {
-      //send collection id, timeInterval, type, itemstodelete array, and rules to create endpoint on backend
+      //SAVE send collection id, timeInterval, type, itemstodelete array, and rules to create endpoint on backend
       const {id, isSmartCollection, ruleSet, title} = this.state.collectionInfo
       const timeInterval = this.state.timeInterval
       const restrictedArr = this.state.itemsToDelete
       console.log('save info', id, isSmartCollection, ruleSet, title, timeInterval, restrictedArr)
       axios({
-        url:'https://56a2492b.ngrok.io/rankProducts',
+        url:`${process.env.API_URL}/rankProducts`,
         method:'post',
         data: {
           collectionId: id,
@@ -173,10 +185,15 @@ export default class CollectsList extends React.Component {
         }
       })
       .then( res => console.log(res.data))
-      .catch( err => console.log(err))
-      this.props.onSelect('complete')
+      .catch( err => {
+        error = err ? true : false
+        console.log(err)
+        this.props.onSelect('error')
+      })
+      console.log(error)
+      error ? this.props.onSelect('error') : this.props.onSelect('complete')
     }else{
-      //send id, isSmartCollection, timeInterval to the update endpoint
+      //UPDATE send id, isSmartCollection, timeInterval to the update endpoint
       const {id, isSmartCollection} = this.state.collectionInfo
       const timeInterval = this.state.timeInterval
       const restrictedArr = this.state.itemsToDelete
@@ -184,7 +201,7 @@ export default class CollectsList extends React.Component {
       console.log('update info', id, isSmartCollection, timeInterval, restrictedArr)
 
       axios({
-        url:'https://56a2492b.ngrok.io/updateCollection',
+        url:`${process.env.API_URL}/updateCollection`,
         method:'put',
         data: {
           collectionId: id,
@@ -196,21 +213,30 @@ export default class CollectsList extends React.Component {
       .then( res => {
         console.log(res.data)
 
-        axios({
-          url:'https://56a2492b.ngrok.io/restrictProducts',
-          method:'post',
-          data: {
-            collectionId: id,
-            restrictedProductArr: restrictedArr
-          }
-        })
-        .then( res => console.log(res))
-        .catch( err => console.log(err))
+        if (restrictedArr.length > 0 ) {
+          console.log('now deleting items')
+          axios({
+            url:`${process.env.API_URL}/restrictProducts`,
+            method:'post',
+            data: {
+              collectionId: id,
+              restrictedProductArr: restrictedArr
+            }
+          })
+          .then( res => {
+            console.log(res)
+          })
+          .catch( err => {
+            console.log(err)
+            this.props.onSelect('error')
+          })
+        }
+        this.props.onSelect('update')
       })
-      .catch( err => console.log(err))
-      //if items to delete? send items to delete endpoint on backend
-
-      this.props.onSelect('update')
+      .catch( err => {
+        console.log(err)
+        this.props.onSelect('error')
+      })
     }
   }
 

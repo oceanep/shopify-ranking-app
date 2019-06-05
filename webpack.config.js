@@ -1,11 +1,15 @@
 const {NODE_ENV} = process.env;
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const webpack = require('webpack');
 const devMode = process.env.NODE_ENV !== "production";
 
 module.exports = {
   mode: NODE_ENV === "production" ? NODE_ENV : "development",
   entry: ["./client/index.js"],
-  plugins: [new MiniCssExtractPlugin({})],
+  plugins: [
+    new MiniCssExtractPlugin({}),
+    new webpack.DefinePlugin({'process.env.API_URL': JSON.stringify( devMode ? process.env.DEV_API_URL : process.env.PROD_API_URL ) })
+  ],
   module: {
     rules: [
       {

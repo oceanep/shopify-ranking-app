@@ -15,7 +15,7 @@ const connectionString = 'postgres://pcyjtmuhkajswg:9b550441c5dd07874a420c4c5482
 // local testing
 
 const pool = new Pool({
-  user: 'kabirvirji',
+  user: 'Ocean',
   host: 'localhost',
   database: 'ranking',
   password: 'password',

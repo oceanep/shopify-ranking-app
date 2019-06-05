@@ -66,7 +66,7 @@ export default class LandingComponent extends React.Component {
                                                       />
             : null
           }
-          {this.state.currentComponent == 'complete'? <Banner title="Ranking in Progress" onDismiss={() => {this.setCurrentComponent('landing')}}>
+          {this.state.currentComponent == 'complete'? <Banner title="Ranking in Progress" status="info" onDismiss={() => {this.setCurrentComponent('landing')}}>
                                                         <p>Ranking can take up to an hour to complete. Your ranked collection will appear in your collections page when complete.
                                                           <br/>NOTE: Products deleted from a Smart Collection through this app will still appear in the collection's products, but will be exlcuded from ranking and pushed to the bottom of the Ranked Collection.
                                                           <br/>NOTE: Changing the sort order type within the Shopify collection admin page WILL erase your ranked collection order until the next day.
@@ -74,12 +74,12 @@ export default class LandingComponent extends React.Component {
                                                       </Banner>
             : null
           }
-          {this.state.currentComponent == 'restore'? <Banner title="Restore Request Received" onDismiss={() => {this.setCurrentComponent('landing')}}>
+          {this.state.currentComponent == 'restore'? <Banner title="Restore Request Received" status="success" onDismiss={() => {this.setCurrentComponent('landing')}}>
                                                       <p>The previously deleted items from this ranked collection will be restored and ranked during this collection's scheduled reranking process.</p>
                                                     </Banner>
             : null
           }
-          {this.state.currentComponent == 'update'? <Banner title="Update Has Been Received" onDismiss={() => {this.setCurrentComponent('landing')}}>
+          {this.state.currentComponent == 'update'? <Banner title="Update Has Been Received" status="success" onDismiss={() => {this.setCurrentComponent('landing')}}>
                                                       <p>Your ranked collection will be updated during it's scheduled reranking process.
                                                         <br/>NOTE: Products deleted from a Smart Collection through this app will still appear in the collection's products, but will be exlcuded from ranking and pushed to the bottom of the Ranked Collection.
                                                         <br/>NOTE: Changing the sort order type within the Shopify collection admin page WILL erase your ranked collection order until the next day.
@@ -87,8 +87,13 @@ export default class LandingComponent extends React.Component {
                                                     </Banner>
             : null
           }
-          {this.state.currentComponent == 'delete'? <Banner title="Ranked Collection Deleted" onDismiss={() => {this.setCurrentComponent('landing')}}>
+          {this.state.currentComponent == 'delete'? <Banner title="Ranked Collection Deleted" status="success" onDismiss={() => {this.setCurrentComponent('landing')}}>
                                                       <p>Your ranked collection has been deleted from our database and shopify's admin page.</p>
+                                                    </Banner>
+            : null
+          }
+          {this.state.currentComponent == 'error'? <Banner title="There Was An Error Ranking Your Collection" status="critical" onDismiss={() => {this.setCurrentComponent('landing')}}>
+                                                      <p>An error occured on our servers, please select your collection and try again.</p>
                                                     </Banner>
             : null
           }

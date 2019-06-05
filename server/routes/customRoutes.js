@@ -14,18 +14,26 @@ module.exports = (router) => {
     })
     .post("/rankProducts", async ctx => {
       console.log("rank products")
-      const body = ctx.request.body
-      const {collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr} = body
-      console.log('rankProducts body', collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr)
-      const res = await ranking.productRank(collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr) // filter happens in here, api call happens here
-      // res variable will have POST request result (send back) collectionId, restricted products, timeInterval etc. anything that needs db calls
-      // make needed route calls using POST data on frontend {collectionId, restrictedArr, timeInterval}
-      // save to collection db (collectionId, collectionName, timeRange, false])
-      const final = await routeHelpers.saveNewCollection(res)
+      try {
+        const body = ctx.request.body
+        const {collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr} = body
+        console.log('rankProducts body', collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr)
+        const res = await ranking.productRank(collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr) // filter happens in here, api call happens here
+        // res variable will have POST request result (send back) collectionId, restricted products, timeInterval etc. anything that needs db calls
+        // make needed route calls using POST data on frontend {collectionId, restrictedArr, timeInterval}
+        // save to collection db (collectionId, collectionName, timeRange, false])
+        const final = await routeHelpers.saveNewCollection(res)
+        // ctx.body = {collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr}
 
+        ctx.body = final
+        ctx.response.status = res.newCollectionId ? 200 : 418
+      }
+      catch(err){
+        console.log("error in rankProducts: ", err)
+        ctx.body = err
+        ctx.response.status = 418
+      }
 
-      // ctx.body = {collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr}
-      ctx.body = final
     })
     .put("/updateCollection", async ctx => {
       // {collectionId, collectionName, timeRange}
@@ -37,6 +45,7 @@ module.exports = (router) => {
         const result = await db.query(queryText, [collectionId, timeInterval, restore])
         console.log("Updated Collection", result)
         ctx.body = result
+        ctx.response.status = result.length > 0 ? 200 : 418
       }catch(err) {
         ctx.body = err
       }
@@ -62,14 +71,15 @@ module.exports = (router) => {
         ctx.body = err
       }
     })
-    .post("/restrictProducts", koaBody(), async ctx => {
+    .post("/restrictProducts", async ctx => {
       // {collection_id, [product_id1, product_id2, product_id3]}
       // restrict and delete from shopify
       try {
         console.log("restrict products")
-        const body = JSON.parse(ctx.request.body)
+        const body = ctx.request.body
         console.log(body)
         const {collectionId, restrictedProductArr} = body
+        if (!restrictedProductArr.length > 0) throw 'no restricted products'
         const queryText = 'INSERT INTO restricted_items (collection_id, product_id) VALUES($1, $2) RETURNING *'
         const result = await Promise.all(restrictedProductArr.map( async productId => {
           let res = await db.query(queryText, [collectionId, productId])
@@ -79,9 +89,10 @@ module.exports = (router) => {
         console.log(result)
         // delete_from_shopify(collection_id, restrictedProductArr)
         ctx.body = result
-
+        ctx.response.status = result.length > 0 ? 200 : 418
       }catch(err) {
         ctx.body = err
+        ctx.response.status = 418
       }
     })
     .post("/restoreRestricedProducts", koaBody(), async ctx => {
@@ -113,6 +124,7 @@ module.exports = (router) => {
         const result = await Promise.all([collectionResult, itemResult])
         console.log(result)
         ctx.body = result
+        ctx.response.status = result[0].length > 0 ? 200 : 418
       }catch(err) {
         ctx.body = err
       }
@@ -207,6 +219,7 @@ module.exports = (router) => {
                         id
                         title
                         ruleSet{
+                            appliedDisjunctively
                             rules{
                               column
                               condition
@@ -228,7 +241,7 @@ module.exports = (router) => {
             title: collection.node.title,
             id: collection.node.id.slice(25),
             isSmartCollection: collection.node.ruleSet ? true : false,
-            ruleSet: collection.node.ruleSet ? collection.node.ruleSet.rules : null
+            ruleSet: collection.node.ruleSet ? collection.node.ruleSet : null
           }
         ))
         ctx.body = { collections}

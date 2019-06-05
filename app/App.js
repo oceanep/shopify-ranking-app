@@ -3,6 +3,9 @@ import LandingContainer from "./LandingContainer.js";
 import {AppProvider, EmptyState} from "@shopify/polaris";
 
 export default class App extends React.Component {
+  componentDidMount(){
+    console.log(process.env.API_URL)
+  }
   render() {
     return (
       <AppProvider>

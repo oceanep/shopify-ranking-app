@@ -67,11 +67,11 @@ const ordersQuery = async (shop, accessToken, lastSyncDate, cursor='') => {
         data: {
             query: `
                 {
-                    orders(first:10, ${cursor ? `after:"${cursor}",` : ''} query:"created_at:>#{${lastSyncDate}}") {
+                    orders(first:10, ${cursor ? `after:"${cursor}",` : ''} query:"processed_at:>#{${lastSyncDate}}") {
                         edges {
                         cursor
                             node {
-                                createdAt
+                                processedAt
                                 id
                                 lineItems(first:10) {
                                     edges {
@@ -97,7 +97,8 @@ const ordersQuery = async (shop, accessToken, lastSyncDate, cursor='') => {
         }
     })
     let ordersArray = res.data.data.orders.edges
-    let ordersCursor = res.data.data.orders.edges.cursor
+    let finalIdx = ordersArray.length - 1
+    let ordersCursor = ordersArray[finalIdx].cursor
     let ordersPaginate = res.data.data.orders.pageInfo.hasNextPage // boolean
 
     console.log("ordersPaginate ", ordersPaginate)
@@ -110,9 +111,9 @@ const ordersQuery = async (shop, accessToken, lastSyncDate, cursor='') => {
       console.log("SLEPT")
     }
 
-    if (ordersPaginate) {ordersArray.concat(await ordersQuery(shop, accessToken, lastSyncDate, ordersCursor))}
+    console.log("current order array: ",ordersArray)
 
-    return ordersArray
+    return ordersPaginate ? ordersArray.concat(await ordersQuery(shop, accessToken, lastSyncDate, ordersCursor)) : ordersArray
 
   } catch(err) {
     console.log(`failed in orders check ${err.stack}`)
@@ -146,7 +147,7 @@ module.exports = {
                 let accumulator = await acc
 
                 let orderID = order.node.id.slice(20)
-                let orderCreatedAt = order.node.createdAt
+                let orderCreatedAt = order.node.processedAt
                 console.log("\nORDER START")
                 console.log("orderID", orderID) // add to queryObj
                 console.log("orderCreatedAt", orderCreatedAt) // add to queryObj
@@ -188,7 +189,8 @@ module.exports = {
 
             }, [])
 
-            console.log("\nFULL QUERY ARRAY\n", final)
+            console.log(`\nFULL QUERY\n amount: ${final.length} \n`)
+            console.log('FULL QUERY ARRAY', final)
             final.forEach(element => {
                 productQueryBuilder(element)
             });

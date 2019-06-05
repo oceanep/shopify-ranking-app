@@ -22,7 +22,7 @@ export default class CollectionDropdown extends React.Component {
     //if new, ping middleware to ping all Collections
     //if not, ping middleware for all ranked collections
     let url = this.state.newRanking? 'getShopifyCollections' : 'getAllRankedCollections'
-    axios.get(`https://56a2492b.ngrok.io/${url}`)
+    axios.get(`${process.env.API_URL}/${url}`)
     .then( res => {
       console.log(this.state.newRanking? res.data.collections: res.data)
       this.setState({collectionObjs: this.state.newRanking? res.data.collections: res.data})
