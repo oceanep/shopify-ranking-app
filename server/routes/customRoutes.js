@@ -65,7 +65,7 @@ module.exports = (router) => {
           }
         ))
         console.log(collections)
-        ctx.body = collections
+        ctx.body = {collections}
         result ? ctx.response.status = 200 : ctx.response.status = 418
       }catch(err) {
         ctx.body = err
@@ -206,48 +206,28 @@ module.exports = (router) => {
       try {
         console.log("getall shopify collections")
         console.log('shop, access', shop, accessToken)
-        let res = await axios({
-            url: `https://${shop}/admin/api/graphql.json`,
-            method: 'post',
-            headers: { 'X-Shopify-Access-Token': accessToken },
-            data: {
-                query: `{
-                  collections(first:250) {
-                    edges {
-                      cursor
-                      node {
-                        id
-                        title
-                        ruleSet{
-                            appliedDisjunctively
-                            rules{
-                              column
-                              condition
-                              relation
-                            }
-                          }
-                        }
-                      }
-                      pageInfo {
-                      hasNextPage
-                    }
-                  }
-                }`
-            }
-        })
-        console.log(res.data.data)
-        const collections = res.data.data.collections.edges.map( collection => (
-          {
+        let collectionRes = await routeHelpers.getAllShopifyCollections(shop, accessToken)
+
+        console.log(collectionRes.data)
+        //check for errors
+        if (collectionRes.data.errors) throw `${collectionRes.data.errors[0].message}`
+
+        const collections = collectionRes.data.data.collections.edges.map( collection => {
+          //const publications = await routeHelpers.getCollectionPublications(shop, accessToken, collection.node.id)
+          console.log(collection)
+          return {
             title: collection.node.title,
             id: collection.node.id.slice(25),
             isSmartCollection: collection.node.ruleSet ? true : false,
             ruleSet: collection.node.ruleSet ? collection.node.ruleSet : null
           }
-        ))
-        ctx.body = { collections}
-        res ? ctx.response.status = 200 : ctx.response.status = 418
+        })
+
+        ctx.body = {collections}
+        collections ? ctx.response.status = 200 : ctx.response.status = 418
       }catch(err) {
         ctx.body = err
+        ctx.response.status = 418
       }
     })
     ;

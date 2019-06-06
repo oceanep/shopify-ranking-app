@@ -88,7 +88,7 @@ export default class LandingComponent extends React.Component {
             : null
           }
           {this.state.currentComponent == 'delete'? <Banner title="Ranked Collection Deleted" status="success" onDismiss={() => {this.setCurrentComponent('landing')}}>
-                                                      <p>Your ranked collection has been deleted from our database and shopify's admin page.</p>
+                                                      <p>Your ranked collection has been deleted from our database, it will still exist in shopify's admin page but will no longer be ranked and updated.</p>
                                                     </Banner>
             : null
           }

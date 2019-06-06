@@ -24,12 +24,15 @@ export default class CollectionDropdown extends React.Component {
     let url = this.state.newRanking? 'getShopifyCollections' : 'getAllRankedCollections'
     axios.get(`${process.env.API_URL}/${url}`)
     .then( res => {
-      console.log(this.state.newRanking? res.data.collections: res.data)
-      this.setState({collectionObjs: this.state.newRanking? res.data.collections: res.data})
-      this.setState({collections: this.mapCollections( this.state.newRanking? res.data.collections: res.data)})
+      console.log(res.data.collections)
+      if (!res.data.collections) throw 'unable to fetch collections'
+
+      this.setState({collectionObjs: res.data.collections})
+      this.setState({collections: this.mapCollections(res.data.collections)})
     })
     .catch(err => {
       console.log(err)
+      this.props.onSelect('error')
     })
   }
 

@@ -38,9 +38,7 @@ cron.schedule('0 4 * * *', async () => {
   const config = {
     headers: { 'X-Shopify-Access-Token': auth.access_token }
   }
-  const appUsername = auth.app_username
-  const appPassword = auth.app_password
-  console.log(config)
+
   allRankedCollections.forEach(async collection => {
     let collectionId = collection.collection_id
     let timeInterval = collection.time_range

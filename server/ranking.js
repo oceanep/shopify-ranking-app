@@ -114,7 +114,8 @@ module.exports = {
                   }
                 `,
                 variables: {
-                  oldTitle: oldTitle,
+                  oldTitle: `RANKED - ${timeInterval} days - ${oldTitle}`,
+                  //publications: titleresourcePublications.map( publication => { publicationId: publication.node.publication.id }),
                   appliedDisjunctively: appliedDisjunctively,
                   rules: rules
                 }
@@ -134,8 +135,10 @@ module.exports = {
             //if you send a manual order sort to a smart collection immediately, it will interfere with shopify's default sorting and confuse the sorting
             //wait a calculated amount of time to send the sort to assure the sent sorting is properly applied, this can be removed once shopify updates its
             //smart collection manual sorting for all stores in August
-            const waitTime = Math.ceil(dataArr.length/2) * 100
-            delay(waitTime)
+            const waitTime = Math.ceil(dataArr.length/4) * 500
+            console.log('waiting...',waitTime)
+            await delay(waitTime)
+            console.log('pushing product order')
             let orderResult = await axios({
               method: 'put',
               url: `https://${shop.shop}/admin/api/2019-07/smart_collections/${newCollectionId}/order.json`,
@@ -169,7 +172,7 @@ module.exports = {
             console.log("collects", collects)
             let dataObj = {
               "custom_collection": {
-                "title": `RANKED ${oldTitle}`,
+                "title": `RANKED - ${timeInterval} days - ${oldTitle}`,
                 "sort_order": "manual",
                 "collects": collects
               }
@@ -182,8 +185,8 @@ module.exports = {
             })
             console.log(createCustomCollection.data)
 
-            const newCollectionId = createResult.data.smart_collection.id
-            const title = createResult.data.smart_collection.title
+            const newCollectionId = createCustomCollection.data.custom_collection.id
+            const title = createCustomCollection.data.custom_collection.title
 
             return {
               newCollectionId: newCollectionId,

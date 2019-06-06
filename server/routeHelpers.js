@@ -1,4 +1,5 @@
 const userAuth = require('./getUser')
+const axios = require('axios')
 const db = require('./db')
 const moment = require('moment');
 
@@ -20,5 +21,68 @@ module.exports = {
           }catch(err) {
             console.log(err)
           }
-        }
+        },
+    getAllShopifyCollections: async (shop, accessToken) => {
+      return await axios({
+          url: `https://${shop}/admin/api/graphql.json`,
+          method: 'post',
+          headers: { 'X-Shopify-Access-Token': accessToken },
+          data: {
+              query: `{
+                collections(first:250) {
+                  edges {
+                    cursor
+                    node {
+                      id
+                      title
+                      ruleSet{
+                          appliedDisjunctively
+                          rules{
+                            column
+                            condition
+                            relation
+                          }
+                        }
+                      }
+                    }
+                    pageInfo {
+                    hasNextPage
+                  }
+                }
+              }`
+          }
+      })
+    },
+    getCollectionPublications: async (shop, accessToken, collectionId) => {
+      //failing on access denied, no idea why
+      try{
+        console.log('publication shop and accessToken', shop, accessToken)
+        let res = await axios({
+            url: `https://${shop}/admin/api/graphql.json`,
+            method: 'post',
+            headers: { 'X-Shopify-Access-Token': accessToken },
+            data: {
+                query: `{
+                  collection(id: "${collectionId}") {
+              			resourcePublications(first:10){
+                      edges{
+                        node{
+                          publication {
+                            id
+                          }
+                        }
+                      }
+                    }
+                  }
+                }`
+            }
+        })
+        console.log(res.data)
+        if (!res.data.data) throw `${res.data.errors[0].message}`
+
+        return res.data.data.resourcePublications
+      }catch(err){
+        console.log(err)
+      }
+    }
 }

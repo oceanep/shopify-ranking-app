@@ -33,6 +33,13 @@ module.exports = {
     let queryText = 'SELECT * FROM restricted_items WHERE collection_id = ($1)'
     let restrictedResult = await db.query(queryText, [collectionId])
 
+    // if doesnt exist
+    //    is smart
+    //      filter and push to bottom
+    //    is custom
+    //      delete, don't filter
+    
+
     if (existingCustom) {
         const comboArr = restrictedArr.concat(restrictedResult)
         console.log("combo arr", comboArr)
@@ -44,7 +51,7 @@ module.exports = {
         // filter and send back ranked array
         const restrictedProducts = restrictedResult.map(x => x.product_id)
         const finalArr = sortedArr.filter(function(item) {
-            return !restrictedProducts.includes(item.rank); 
+            return !restrictedProducts.includes(item.rank);
         })
         return finalArr
     }
@@ -57,36 +64,36 @@ module.exports = {
             });
             console.log("val", val)
             return val === undefined
-            
-        }) 
-        
+
+        })
+
         console.log("FILTERED", filtered)
         return filtered
     } else {
-        if (restrictedArr.length !== 0) { // no restricted arr, new ranked collection
+        if (restrictedArr.length !== 0) { // is restricted arr, new ranked collection
+
             const finalArr = sortedArr.filter(function(item) {
                 let val = restrictedArr.find(e => {
                     return e == item.productId
                 });
                 return item.productId == val ? false : true
             })
-            return finalArr 
+            return finalArr
         } else { // have restrictedArr
             // if restrictedArr, delete using those (just replace result with restrictedArr) filter using restrictedArr function
             const restrictedProducts = restrictedResult.map(x => x.product_id)
             const finalArr = sortedArr.filter(function(item) {
-                return !restrictedProducts.includes(item.rank); 
+                return !restrictedProducts.includes(item.rank);
             })
             // if exists custom collection, delete every product from shopify (call external function)
             return finalArr
 
 
 
-            
+
         }
 
         }
     }
 
 }
-

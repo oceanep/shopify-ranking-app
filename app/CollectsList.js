@@ -1,6 +1,6 @@
 import React from "react";
 import axios from "axios";
-import {Page, PageActions, Thumbnail, ResourceList, Card, TextStyle, Modal, TextContainer, RangeSlider, Pagination} from "@shopify/polaris";
+import {Page, PageActions, Thumbnail, ResourceList, Card, TextStyle, Modal, TextContainer, RangeSlider, Pagination, Badge} from "@shopify/polaris";
 import CollectsListFooter from "./CollectsListFooter/CollectsListFooter"
 
 const isEmpty = (obj) => {
@@ -331,12 +331,6 @@ export default class CollectsList extends React.Component {
         onAction: () => {this.handleModalChange('products')},
       }
     ]
-    const filterControl = (
-      <ResourceList.FilterControl
-        searchValue={this.state.searchValue}
-        onSearchChange={this.handleSearchChange}
-      />
-    )
 
     const paginationMarkup = this.state.currentCollects.length > 0
       ? (
@@ -355,6 +349,9 @@ export default class CollectsList extends React.Component {
       <React.Fragment>
         {this.renderModal()}
         <Card>
+          <div style={{padding: "1em 1em 0em 1em"}}>
+            <Badge>{this.state.collectionInfo.isSmartCollection ? "Smart Collection" : "Custom Collection"}</Badge>
+          </div>
           <div style={{padding: "1em"}}>
             <RangeSlider
               label="How far back would you like to rank by?"
@@ -374,7 +371,6 @@ export default class CollectsList extends React.Component {
             selectedItems={this.state.selectedItems}
             onSelectionChange={this.handleSelectionChange}
             promotedBulkActions={promotedBulkActions}
-            filterControl={filterControl}
             hasMoreItems={this.state.allCollects.length > 50 ? true : false }
             loading={this.state.loading}
           />
