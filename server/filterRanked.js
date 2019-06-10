@@ -6,7 +6,7 @@ const delete_from_shopify_collection = async (collectionId, productIdArr, access
     console.log("gql arr", gqlProductArr)
     console.log(accessToken)
     const res = await axios({
-        url: `https://kabir-test.myshopify.com/admin/api/graphql.json`,
+        url: `https://product-ranking.herokuapp.com/admin/api/graphql.json`,
         method: 'post',
         headers: { 'X-Shopify-Access-Token': accessToken },
         data: {
@@ -38,7 +38,7 @@ module.exports = {
     //      filter and push to bottom
     //    is custom
     //      delete, don't filter
-    
+
 
     if (existingCustom) {
         const comboArr = restrictedArr.concat(restrictedResult)
