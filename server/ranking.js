@@ -114,7 +114,7 @@ const handleNewCustomCollection = async (collectionId, sortedArr, restrictedArr,
   console.log("new custom collection")
 
   //needs to delete restricted after creation
-  let filteredArr = await filter.filterCustomCollection(collectionId, sortedArr, restrictedArr, shop.access_token)
+  let filteredArr = await filter.filterCustomCollection(collectionId, sortedArr, restrictedArr, shop.shop, shop.access_token, true)
   console.log('handle new custom, filtered', filteredArr)
 
   let collects = filteredArr.map((id, i) => {
@@ -154,88 +154,100 @@ const handleNewCustomCollection = async (collectionId, sortedArr, restrictedArr,
 }
 
 const handleExistingSmartCollection = async (collectionId, sortedArr, restrictedArr, newTitle, shop) => {
-  console.log("existing smart collection")
+  try{
+    console.log("existing smart collection")
 
-  //pass in restrictedArr
-  let filteredArr = await filter.filterSmartCollection(collectionId, sortedArr, restrictedArr)
-  console.log("filteredArr", filteredArr)
-  //convert to int
-  let intFilteredArr = filteredArr.map( id => parseInt(id))
+    //pass in restrictedArr
+    let filteredArr = await filter.filterSmartCollection(collectionId, sortedArr, restrictedArr)
+    console.log("filteredArr", filteredArr)
+    //convert to int
+    let intFilteredArr = filteredArr.map( id => parseInt(id))
 
 
-  console.log("filteredArr", intFilteredArr)
-  let titleResult = await axios({
-    method: 'put',
-    url: `https://${shop.shop}/admin/api/2019-07/smart_collections/${collectionId}.json`,
-    data: {
-      "smart_collection": {
-        "title": newTitle,
-        "handle": newTitle
-      }
-    },
-    headers: { 'X-Shopify-Access-Token': shop.access_token, 'Content-Type': 'application/json' }
-  })
-  let orderResult = await axios({
-    method: 'put',
-    url: `https://${shop.shop}/admin/api/2019-07/smart_collections/${collectionId}/order.json`,
-    data: {
-      "sort_order": "manual",
-      "products": intFilteredArr
-    },
-    headers: { 'X-Shopify-Access-Token': shop.access_token, 'Content-Type': 'application/json' }
-  })
-  console.log("new title, order result", titleResult.data.smart_collection.title, orderResult.data)
-  return {
-    collectionId: titleResult.data.smart_collection.id,
-    title: titleResult.data.smart_collection.title,
-    smartCollection: true,
-    new: false,
-    restrictedArr: restrictedArr
+    console.log("filteredArr", intFilteredArr)
+    let titleResult = await axios({
+      method: 'put',
+      url: `https://${shop.shop}/admin/api/2019-07/smart_collections/${collectionId}.json`,
+      data: {
+        "smart_collection": {
+          "title": newTitle,
+          "handle": newTitle
+        }
+      },
+      headers: { 'X-Shopify-Access-Token': shop.access_token, 'Content-Type': 'application/json' }
+    })
+    let orderResult = await axios({
+      method: 'put',
+      url: `https://${shop.shop}/admin/api/2019-07/smart_collections/${collectionId}/order.json`,
+      data: {
+        "sort_order": "manual",
+        "products": intFilteredArr
+      },
+      headers: { 'X-Shopify-Access-Token': shop.access_token, 'Content-Type': 'application/json' }
+    })
+    console.log("new title, order result", titleResult.data.smart_collection.title, orderResult.data)
+    return {
+      collectionId: titleResult.data.smart_collection.id,
+      title: titleResult.data.smart_collection.title,
+      smartCollection: true,
+      new: false,
+      restrictedArr: restrictedArr
+    }
+  }
+  catch(err){
+    console.log(err)
   }
 }
 
-const handleExistingCustomCollection = async (collectionId, allCollects, sortedArr, restrictedArr, shop) => {
-  console.log("existing custom collection")
-  let filteredArr = await filter.filterCustomCollection(collectionId, sortedArr, restrictedArr, shop.access_token)
-  console.log(filteredArr)
+const handleExistingCustomCollection = async (collectionId, allCollects, sortedArr, restrictedArr, newTitle, shop) => {
+  try{
+    console.log("existing custom collection")
+    let filteredArr = await filter.filterCustomCollection(collectionId, sortedArr, restrictedArr, shop.shop, shop.access_token)
+    console.log(filteredArr)
 
 
-  //get collects and map special id to product id
-  const finalArr = filteredArr.filter( item => {
-      let val = allCollects.find(e => {
-          return e.product_id == item.productId
-      });
-      return val.id
-  })
+    //get collects and map special id to product id
+    const finalArr = filteredArr.map( item => {
+        let val = allCollects.find(e => {
+            console.log(e.product_id, item)
+            return e.product_id == parseInt(item)
+        });
+        console.log("\n\n\n VAL \n\n\n", val.id)
+        return val.id
+    })
 
-  let collects = finalArr.map((id, i) => {
-    return {
-      id: parseInt(id),
-      position: +i + 1
+    let collects = finalArr.map((id, i) => {
+      return {
+        id: parseInt(id),
+        position: +i + 1
+      }
+    })
+    console.log("collects to send", collects)
+    let dataObj = {
+      "custom_collection": {
+        "title": newTitle,
+        "handle": newTitle,
+        "sort_order": "manual",
+        "collects": collects
+      }
     }
-  })
-  console.log("collects", collects)
-  let dataObj = {
-    "custom_collection": {
-      "title": newTitle,
-      "handle": newTitle,
-      "sort_order": "manual",
-      "collects": collects
+    let updatedCollection = await axios({
+      method: 'put',
+      url: `https://${shop.shop}/admin/api/2019-04/custom_collections/${collectionId}.json`,
+      data: dataObj,
+      headers: { 'X-Shopify-Access-Token': shop.access_token, 'Content-Type': 'application/json' }
+    })
+
+    return {
+      newCollectionId: updatedCollection.data.custom_collection.id,
+      title: updatedCollection.data.custom_collection.title,
+      smartCollection: false,
+      new: false,
+      restrictedArr: restrictedArr
     }
   }
-  let updatedCollection = await axios({
-    method: 'post',
-    url: `https://${shop.shop}/admin/api/2019-04/custom_collections.json`,
-    data: dataObj,
-    headers: { 'X-Shopify-Access-Token': shop.access_token, 'Content-Type': 'application/json' }
-  })
-
-  return {
-    newCollectionId: updaptedCollection.data.custom_collection.id,
-    title: updaptedCollection.data.custom_collection.title,
-    smartCollection: false,
-    new: false,
-    restrictedArr: restrictedArr
+  catch(err){
+    console.log(err)
   }
 }
 
@@ -294,6 +306,8 @@ module.exports = {
         let isNewCollection = collectionResult.length === 0 ? true : false
 
         if (isNewCollection) {
+          let newTitle = `RANKED - ${timeInterval} days - ${collectionTitle}`
+
           if (smartCollection) { //if is smart Collection
             return await handleNewSmartCollection(collectionId, sortedArr, restrictedArr, timeInterval, newTitle, ruleSet, shop)
           } else { //if is custom Collection
@@ -301,11 +315,12 @@ module.exports = {
           }
         }
 
-        if (isNewCollection === false) {
+        if (!isNewCollection) {
+          let newTitle = collectionTitle
           if (collectionResult[0].smart_collection) { // if smart collection
             return await handleExistingSmartCollection(collectionId, sortedArr, restrictedArr, newTitle, shop)
           } else { // if custom
-            return await handleExistingCustomCollection(collectionId, allCollects, sortedArr, restrictedArr, shop)
+            return await handleExistingCustomCollection(collectionId, allCollects, sortedArr, restrictedArr, newTitle, shop)
           }
         }
 

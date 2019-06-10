@@ -1,19 +1,19 @@
 const db = require('./db')
 const axios = require('axios');
 
-const delete_from_shopify_collection = async (collectionId, productIdArr, accessToken) => {
-    const gqlProductArr = await productIdArr.map(id => `gid://shopify/Product/${id}`)
+const delete_from_shopify_collection = async (collectionId, productIdArr, shop, accessToken) => {
+    const gqlProductArr = productIdArr.map( item => `gid://shopify/Product/${item.productId}`)
     console.log("gql arr", gqlProductArr)
     console.log(accessToken)
     try{
       const res = await axios({
-          url: `https://product-ranking.herokuapp.com/admin/api/graphql.json`,
+          url: `https://${shop}/admin/api/graphql.json`,
           method: 'post',
           headers: { 'X-Shopify-Access-Token': accessToken },
           data: {
               query: `
-                mutation {
-                  collectionRemoveProducts(id: "gid://shopify/Collection/${collectionId}", productIds: ${gqlProductArr}) {
+                mutation collectionRemoveProducts($id:ID!, $productIds:[ID!]!){
+                  collectionRemoveProducts(id: $id, productIds: $productIds) {
                       job {
                         id
                       }
@@ -23,14 +23,17 @@ const delete_from_shopify_collection = async (collectionId, productIdArr, access
                       }
                     }
                 }
-              `
+              `,
+              variables: {
+                id: `gid://shopify/Collection/${collectionId}`,
+                productIds: gqlProductArr
+              }
           }
         })
-      return res.data
+      if (res.data.errors) throw res.data.errors
     }
     catch(err){
       console.log(err)
-      throw err
     }
 }
 
@@ -66,16 +69,19 @@ module.exports = {
       console.log('filterSmartCollection finalArr', finalArr)
       return finalArr
     },
-    filterCustomCollection: async (collectionId, sortedArr, restrictedArr=[], accessToken='') => {
+    filterCustomCollection: async (collectionId, sortedArr, restrictedArr=[], shop, accessToken='', isNew = false) => {
       //sorted not including past restricted but including current restricted
       //filter current restricted
       const filterRes = filterRanked(sortedArr, restrictedArr)
       //and delete current restricted
       //compare sortedArr to all restrictedArr, delete products from sortedArr that are still in restrictedArr from shopify
       const toDeleteArr = sortedArr.filter( (item) => {
-          return restrictedArr.includes(item.productId);
+          console.log('\n\n\n CHECKING DELETES', item.productId)
+          return restrictedArr.includes(item.productId.toString());
       })
-      if (toDeleteArr.length > 0) await delete_from_shopify_collection(collectionId, toDeleteArr, accessToken)
+      console.log('\n\n IS IT NEW', toDeleteArr.length, isNew)
+      console.log('\n\n TODELETE ARRAY', toDeleteArr)
+      if ((toDeleteArr.length > 0) && (!isNew)) {await delete_from_shopify_collection(collectionId, toDeleteArr, shop, accessToken)}
 
       return filterRes.finalArr
     }
