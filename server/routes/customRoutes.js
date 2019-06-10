@@ -188,7 +188,7 @@ module.exports = (router) => {
         console.log(res.data.data)
         const products = res.data.data.collection.products.edges.map( product => (
           {
-            id: product.node.id.slice(23),
+            id: product.node.id.slice(22),
             title: product.node.title,
             imgSrc: product.node.featuredImage ? product.node.featuredImage.originalSrc : ''
           }
