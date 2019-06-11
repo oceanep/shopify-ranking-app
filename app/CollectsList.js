@@ -118,13 +118,15 @@ export default class CollectsList extends React.Component {
     const allCollects = this.state.allCollects.filter( collect => {
       return !this.state.selectedItems.includes(collect.id)
     })
-    const itemsToDelete = this.state.selectedItems
-    this.setState({
-      itemsToDelete,
-      allCollects,
-      currentCollects: allCollects.slice(0,50),
-      selectedItems: []
-    })
+    const newToDelete = this.state.selectedItems
+    this.setState( prevState => (
+      {
+        itemsToDelete: prevState.itemsToDelete.concat(newToDelete),
+        allCollects,
+        currentCollects: allCollects.slice(0,50),
+        selectedItems: []
+      }
+    ))
     this.handleModalChange('')
     console.log('handle item deletion')
   }

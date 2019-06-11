@@ -12,7 +12,7 @@ const lineItemPagination = async (order_id, cursor, dataArray, accessToken, shop
     try {
       console.log('waiting...')
         const res = await axios({
-            url: `https://kabir-test.myshopify.com/admin/api/graphql.json`,
+            url: `https://product-ranking.herokuapp.com/admin/api/graphql.json`,
             method: 'post',
             headers: { 'X-Shopify-Access-Token': accessToken },
             data: {

@@ -1,99 +1,88 @@
 const db = require('./db')
 const axios = require('axios');
 
-const delete_from_shopify_collection = async (collectionId, productIdArr, accessToken) => {
-    const gqlProductArr = await productIdArr.map(id => `gid://shopify/Product/${id}`)
+const delete_from_shopify_collection = async (collectionId, productIdArr, shop, accessToken) => {
+    const gqlProductArr = productIdArr.map( item => `gid://shopify/Product/${item.productId}`)
     console.log("gql arr", gqlProductArr)
     console.log(accessToken)
-    const res = await axios({
-        url: `https://kabir-test.myshopify.com/admin/api/graphql.json`,
-        method: 'post',
-        headers: { 'X-Shopify-Access-Token': accessToken },
-        data: {
-            query: `
-              mutation {
-                collectionRemoveProducts(id: "gid://shopify/Collection/${collectionId}", productIds: ${gqlProductArr}) {
-                    job {
-                      id
+    try{
+      const res = await axios({
+          url: `https://${shop}/admin/api/graphql.json`,
+          method: 'post',
+          headers: { 'X-Shopify-Access-Token': accessToken },
+          data: {
+              query: `
+                mutation collectionRemoveProducts($id:ID!, $productIds:[ID!]!){
+                  collectionRemoveProducts(id: $id, productIds: $productIds) {
+                      job {
+                        id
+                      }
+                      userErrors {
+                        field
+                        message
+                      }
                     }
-                    userErrors {
-                      field
-                      message
-                    }
-                  }
+                }
+              `,
+              variables: {
+                id: `gid://shopify/Collection/${collectionId}`,
+                productIds: gqlProductArr
               }
-            `
-        }
-      })
-    return res.data
+          }
+        })
+      if (res.data.errors) throw res.data.errors
+    }
+    catch(err){
+      console.log(err)
+    }
+}
+
+const filterRanked = (sortedArr, restrictedArr) => {
+  const finalArr = sortedArr.filter(function(item) {
+      return !restrictedArr.includes(item.productId.toString());
+  })
+
+  return {
+    finalArr: finalArr.map(x => x.productId.toString()),
+    restrictedArr: restrictedArr
+  }
 }
 
 module.exports = {
-    filterRanked: async (collectionId, sortedArr, restrictedArr=[], existingCustom=false, accessToken='') => {
-    let queryText = 'SELECT * FROM restricted_items WHERE collection_id = ($1)'
-    let restrictedResult = await db.query(queryText, [collectionId])
+    filterSmartCollection: async (collectionId, sortedArr, restrictedArr=[]) => {
+      //sorted always includes all restricted
+      //concat old restricted and new restricted
+      // let queryText = 'SELECT product_id FROM restricted_items WHERE collection_id = ($1)'
+      // let restrictedResult = await db.query(queryText, [collectionId])
+      // console.log(restrictedResult)
+      // const dbRestrictedArr = restrictedResult.length > 0 ? restrictedResult.map(x => x.product_id) : []
+      // const fullRestrictedArr = dbRestrictedArr.length > 0 ? restrictedArr.concat(dbRestrictedArr) : restrictedArr
 
-    // if doesnt exist
-    //    is smart
-    //      filter and push to bottom
-    //    is custom
-    //      delete, don't filter
-    
+      //filter combo restricted
+      const filterRes = filterRanked(sortedArr, restrictedArr)
+      console.log('filtered array length: ', filterRes.finalArr.length)
+      console.log('filterSmartCollection filterRes', filterRes)
 
-    if (existingCustom) {
-        const comboArr = restrictedArr.concat(restrictedResult)
-        console.log("combo arr", comboArr)
-        if (comboArr.length !== 0) {
-            const job = await delete_from_shopify_collection(collectionId, comboArr, accessToken)
-            console.log(job)
-        }
+      //concat combo restricted to bottom
+      const finalArr = filterRes.finalArr.concat(filterRes.restrictedArr)
+      console.log('final array length: ', finalArr.length)
+      console.log('filterSmartCollection finalArr', finalArr)
+      return finalArr
+    },
+    filterCustomCollection: async (collectionId, sortedArr, restrictedArr=[], shop, accessToken='', isNew = false) => {
+      //sorted not including past restricted but including current restricted
+      //filter current restricted
+      const filterRes = filterRanked(sortedArr, restrictedArr)
+      //and delete current restricted
+      //compare sortedArr to all restrictedArr, delete products from sortedArr that are still in restrictedArr from shopify
+      const toDeleteArr = sortedArr.filter( (item) => {
+          console.log('\n\n\n CHECKING DELETES', item.productId)
+          return restrictedArr.includes(item.productId.toString());
+      })
+      console.log('\n\n IS IT NEW', toDeleteArr.length, isNew)
+      console.log('\n\n TODELETE ARRAY', toDeleteArr)
+      if ((toDeleteArr.length > 0) && (!isNew)) {await delete_from_shopify_collection(collectionId, toDeleteArr, shop, accessToken)}
 
-        // filter and send back ranked array
-        const restrictedProducts = restrictedResult.map(x => x.product_id)
-        const finalArr = sortedArr.filter(function(item) {
-            return !restrictedProducts.includes(item.rank);
-        })
-        return finalArr
+      return filterRes.finalArr
     }
-
-    if (restrictedResult.length !== 0) { // restricted product array exists (collection exists)
-        const filtered = sortedArr.filter(function(item) {
-            let val = restrictedResult.find(e => {
-                console.log("iteration", e.product_id, item.productId, e.product_id == item.productId)
-                return e.product_id == item.productId
-            });
-            console.log("val", val)
-            return val === undefined
-
-        })
-
-        console.log("FILTERED", filtered)
-        return filtered
-    } else {
-        if (restrictedArr.length !== 0) { // is restricted arr, new ranked collection
-
-            const finalArr = sortedArr.filter(function(item) {
-                let val = restrictedArr.find(e => {
-                    return e == item.productId
-                });
-                return item.productId == val ? false : true
-            })
-            return finalArr
-        } else { // have restrictedArr
-            // if restrictedArr, delete using those (just replace result with restrictedArr) filter using restrictedArr function
-            const restrictedProducts = restrictedResult.map(x => x.product_id)
-            const finalArr = sortedArr.filter(function(item) {
-                return !restrictedProducts.includes(item.rank);
-            })
-            // if exists custom collection, delete every product from shopify (call external function)
-            return finalArr
-
-
-
-
-        }
-
-        }
-    }
-
 }
