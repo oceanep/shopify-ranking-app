@@ -8,7 +8,10 @@ module.exports = {
   entry: ["./client/index.js"],
   plugins: [
     new MiniCssExtractPlugin({}),
-    new webpack.DefinePlugin({'process.env.API_URL': JSON.stringify( devMode ? process.env.DEV_API_URL : process.env.PROD_API_URL ) })
+    new webpack.DefinePlugin({'process.env': {
+      API_URL: JSON.stringify( devMode ? process.env.DEV_API_URL : process.env.PROD_API_URL )
+      }
+    })
   ],
   module: {
     rules: [
