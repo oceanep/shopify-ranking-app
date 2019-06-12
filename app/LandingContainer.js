@@ -1,5 +1,5 @@
 import React from "react";
-import {Page, PageActions, Button, Banner} from "@shopify/polaris";
+import {Page, PageActions, Button, Banner, TextContainer, Heading} from "@shopify/polaris";
 import CollectionDropdown from "./CollectionDropdown.js";
 import CollectsList from "./CollectsList.js";
 
@@ -33,16 +33,33 @@ export default class LandingComponent extends React.Component {
           title="Product Ranking App"
         >
           {this.state.currentComponent == 'landing' ?
-            <PageActions
-              primaryAction={{ content:'Ranked Collections', onAction: () => {
-                this.setCurrentComponent('rankedCollections')
-                this.isNewRanking(false)
-              }}}
-              secondaryActions={[{ content: 'New Ranking', onAction: () => {
-                this.setCurrentComponent('allCollections')
-                this.isNewRanking(true)
-              }}]}
-            />
+            <React.Fragment>
+              <TextContainer>
+                <p>
+                  <Heading>This app creates a new “ranked” collection by ranking the products in an existing collection, and creating a new one.</Heading>
+                  <br/>-The ranking is done by frequency of products ordered, within a user-set time frame.
+                  <br/>-Every night the collections are updated with new ranks.
+                  <br/>-You’ll be able to choose items you don’t want in the new ranked collection, however if you’d like these items back please click “restore” and the collection will have all its products back when it re-ranks.
+                </p>
+                <Heading>RULES</Heading>
+                <p>
+                  <br/>- do not change the sort order of the collections (leave as manual)
+                  <br/>- low ranking products will appear at the bottom of smart collections, they will be deleted from custom collections
+                  <br/>- ranked collections must be deleted within the app
+                  <br/>- ranked collections will be restored overnight
+                </p>
+              </TextContainer>
+              <PageActions
+                primaryAction={{ content:'Ranked Collections', onAction: () => {
+                  this.setCurrentComponent('rankedCollections')
+                  this.isNewRanking(false)
+                }}}
+                secondaryActions={[{ content: 'New Ranking', onAction: () => {
+                  this.setCurrentComponent('allCollections')
+                  this.isNewRanking(true)
+                }}]}
+              />
+            </React.Fragment>
           : null}
 
           {this.state.currentComponent == 'rankedCollections'? <CollectionDropdown
