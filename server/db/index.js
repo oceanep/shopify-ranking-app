@@ -3,24 +3,24 @@ const connectionString = 'postgres://pcyjtmuhkajswg:9b550441c5dd07874a420c4c5482
 
 // production
 
-// const pool = new Pool({
-//   user: 'pcyjtmuhkajswg',
-//   host: 'ec2-50-17-227-28.compute-1.amazonaws.com',
-//   database: 'd8neqmlds0b2ut',
-//   password: '9b550441c5dd07874a420c4c54828c5e88516c61b84d451c9d475f25794403b2',
-//   port: 5432,
-//   ssl: true
-// })
+const pool = new Pool({
+  user: 'pcyjtmuhkajswg',
+  host: 'ec2-50-17-227-28.compute-1.amazonaws.com',
+  database: 'd8neqmlds0b2ut',
+  password: '9b550441c5dd07874a420c4c54828c5e88516c61b84d451c9d475f25794403b2',
+  port: 5432,
+  ssl: true
+})
 
 // local testing
 
-const pool = new Pool({
-  user: 'Ocean',
-  host: 'localhost',
-  database: 'ranking',
-  password: 'password',
-  port: 5432,
-})
+// const pool = new Pool({
+//   user: 'Ocean',
+//   host: 'localhost',
+//   database: 'ranking',
+//   password: 'password',
+//   port: 5432,
+// })
 
 module.exports = {
   query: async (text, params) => {
