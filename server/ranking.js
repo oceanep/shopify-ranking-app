@@ -302,11 +302,11 @@ module.exports = {
         console.log("collection result", collectionResult)
 
         // set new name of collection
-        let newTitle = `RANKED - ${collectionTitle}`
+        let newTitle = `RANKING - ${collectionTitle}`
         let isNewCollection = collectionResult.length === 0 ? true : false
 
         if (isNewCollection) {
-          let newTitle = `RANKED - ${collectionTitle}`
+          let newTitle = `RANKING - ${collectionTitle}`
 
           if (smartCollection) { //if is smart Collection
             return await handleNewSmartCollection(collectionId, sortedArr, restrictedArr, timeInterval, newTitle, ruleSet, shop)

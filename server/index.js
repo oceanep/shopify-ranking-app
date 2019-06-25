@@ -40,7 +40,6 @@ app.keys = [SHOPIFY_SECRET];
 app.use(session(app));
 app.use(bodyParser()); // changed
 const router = Router();
-console.log(SHOPIFY_API_KEY)
 app.use(
   createShopifyAuth({
     apiKey: SHOPIFY_API_KEY,
