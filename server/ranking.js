@@ -46,6 +46,7 @@ const handleNewSmartCollection = async (collectionId, sortedArr, restrictedArr, 
           mutation collectionCreate($newTitle:String!, $appliedDisjunctively:Boolean!, $rules:[CollectionRuleInput!]){
             collectionCreate(input: {
                 title: $newTitle
+                templateSuffix: "ranking"
                 ruleSet: {
                   appliedDisjunctively: $appliedDisjunctively
                   rules: $rules
@@ -127,6 +128,7 @@ const handleNewCustomCollection = async (collectionId, sortedArr, restrictedArr,
   let dataObj = {
     "custom_collection": {
       "title": newTitle,
+      "template_suffix": "ranking",
       "sort_order": "manual",
       "collects": collects
     }
