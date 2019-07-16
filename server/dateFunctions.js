@@ -2,9 +2,10 @@ const userAuth = require('./getUser')
 const moment = require('moment');
 
 module.exports = {
-    dayCalc: async (target) => { // now utc.moment obj, origin from db
+    dayCalc: async (target, shop) => { // now utc.moment obj, origin from db
         // let target = moment.utc() // current time in moment obj
-        let auth = await userAuth.getUser() // get auth values from db
+        let auth = await userAuth.getUser(shop) // get auth values from db
+        console.log('date functions shop', auth.shop)
 
         console.log('Day Calc auth.origin', auth.origin)
         let origin = moment.utc(auth.origin) // convert to moment obj

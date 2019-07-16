@@ -15,14 +15,15 @@ module.exports = (router) => {
     .post("/rankProducts", async ctx => {
       console.log("rank products")
       try {
+        const {shop, accessToken} = ctx.session;
         const body = ctx.request.body
         const {collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr} = body
-        console.log('rankProducts body', collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr)
-        const res = await ranking.productRank(collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr) // filter happens in here, api call happens here
+        console.log('rankProducts body', collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr, shop)
+        const res = await ranking.productRank(collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr, shop) // filter happens in here, api call happens here
         // res variable will have POST request result (send back) collectionId, restricted products, timeInterval etc. anything that needs db calls
         // make needed route calls using POST data on frontend {collectionId, restrictedArr, timeInterval}
         // save to collection db (collectionId, collectionName, timeRange, false])
-        const final = await routeHelpers.saveNewCollection(res)
+        const final = await routeHelpers.saveNewCollection(res, shop)
         // ctx.body = {collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr}
 
         ctx.body = final
@@ -39,10 +40,11 @@ module.exports = (router) => {
       // {collectionId, collectionName, timeRange}
       // possible time range values: '7', '30', '90', '180'
       try {
+        const {shop, accessToken} = ctx.session;
         const body = ctx.request.body
         const {collectionId, smartCollection, timeInterval, restore} = body
-        const queryText = 'UPDATE collections SET time_range = ($2), restore = ($3)  WHERE collection_id = ($1) RETURNING *'
-        const result = await db.query(queryText, [collectionId, timeInterval, restore])
+        const queryText = 'UPDATE collections SET time_range = ($2), restore = ($3)  WHERE (collection_id = ($1) and shop = ($4)) RETURNING *'
+        const result = await db.query(queryText, [collectionId, timeInterval, restore, shop])
         console.log("Updated Collection", result)
         ctx.body = result
         ctx.response.status = result.length > 0 ? 200 : 418
@@ -54,7 +56,8 @@ module.exports = (router) => {
       //get all ranked collections
       try {
         console.log("getall ranked")
-        const result = await db.query(`SELECT * FROM collections`)
+        const {shop, accessToken} = ctx.session;
+        const result = await db.query(`SELECT * FROM collections WHERE shop = $1`, [shop])
         const collections = result.map( collection => (
           {
             title: collection.collection_name,
@@ -76,6 +79,7 @@ module.exports = (router) => {
       // restrict and delete from shopify
       try {
         console.log("restrict products")
+        const {shop, accessToken} = ctx.session;
         const body = ctx.request.body
         console.log(body)
         const {collectionId, restrictedProductArr} = body
@@ -99,11 +103,12 @@ module.exports = (router) => {
       // {collection_id}
       // change restore boolean
       try {
-        const body = JSON.parse(ctx.request.body)
+        const {shop, accessToken} = ctx.session;
+        const body = ctx.request.body
         console.log(body)
         const {collectionId} = body
-        const restoreQuery = 'UPDATE collections SET restore = ($1) WHERE collection_id = ($2) RETURNING *'
-        const restoreResult = await db.query(restoreQuery, [true, collectionId])
+        const restoreQuery = 'UPDATE collections SET restore = ($1) WHERE (collection_id = ($2) and shop = ($3)) RETURNING *'
+        const restoreResult = await db.query(restoreQuery, [true, collectionId, shop])
         console.log(restoreResult)
         ctx.body = restoreResult
       } catch(err) {
@@ -114,12 +119,13 @@ module.exports = (router) => {
       // {collection_id}
       // delete collection from tables (2 tables)
       try {
+        const {shop, accessToken} = ctx.session;
         const body = ctx.request.body
         console.log(body)
         const {collectionId} = body
-        const collectionQuery = 'DELETE FROM collections WHERE collection_id = ($1) RETURNING *'
+        const collectionQuery = 'DELETE FROM collections WHERE (collection_id = ($1) and shop = ($2)  RETURNING *'
         const itemQuery = 'DELETE FROM restricted_items WHERE collection_id = ($1) RETURNING *'
-        const collectionResult = await db.query(collectionQuery, [collectionId])
+        const collectionResult = await db.query(collectionQuery, [collectionId, shop])
         const itemResult = await db.query(itemQuery, [collectionId])
         const result = await Promise.all([collectionResult, itemResult])
         console.log(result)
@@ -208,11 +214,9 @@ module.exports = (router) => {
         console.log('shop, access', shop, accessToken)
         let collectionRes = await routeHelpers.getAllShopifyCollections(shop, accessToken)
 
-        console.log(collectionRes.data)
-        //check for errors
-        if (collectionRes.data.errors) throw `${collectionRes.data.errors[0].message}`
+        console.log(collectionRes)
 
-        const collections = collectionRes.data.data.collections.edges.map( collection => {
+        const collections = collectionRes.map( collection => {
           //const publications = await routeHelpers.getCollectionPublications(shop, accessToken, collection.node.id)
           console.log(collection)
           return {

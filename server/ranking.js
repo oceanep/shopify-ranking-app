@@ -20,7 +20,7 @@ const bottomProducts = async (collectionId) => {
 const mapCustomCollects = async (collects) => {
   const collectsArr = collects.map( collect => ({ productId: collect.product_id, id: collect.id}))
   console.log(collectsArr)
-
+ 
   return collectsArr
 }
 
@@ -257,14 +257,13 @@ const delay = (duration) =>
   new Promise(resolve => setTimeout(resolve, duration));
 
 module.exports = {
-  productRank: async (collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr) => { // needs to take what is being POSTed
+  productRank: async (collectionId, smartCollection, ruleSet, collectionTitle, timeInterval, restrictedArr, shopName) => { // needs to take what is being POSTed
       try{
         console.log("product rank\n")
-        console.log(`id: ${collectionId}, smart?: ${smartCollection}, rules: ${ruleSet}, title: ${collectionTitle}, time: ${timeInterval} \n`)
+        console.log(`id: ${collectionId}, smart?: ${smartCollection}, rules: ${ruleSet}, title: ${collectionTitle}, time: ${timeInterval}, shop name: ${shopName} \n`)
         //  get shop
-        const shop = await userAuth.getUser();
-        const appUsername = shop.app_username
-        const appPassword = shop.app_password
+        const shop = await userAuth.getUser(shopName);
+
         console.log(shop)
         const config = {
           headers: {'X-Shopify-Access-Token': shop.access_token, 'Content-Type': 'application/json' }
@@ -281,16 +280,16 @@ module.exports = {
         console.log('now', now)
         const start = dateFunctions.timeIntervalMoment(timeInterval, now)
         console.log('start, now',start, now)
-        const startDay = await dateFunctions.dayCalc(start)
-        const endDay = await dateFunctions.dayCalc(now)
+        const startDay = await dateFunctions.dayCalc(start, shopName)
+        const endDay = await dateFunctions.dayCalc(now, shopName)
         console.log(`\nStartDay ${startDay} EndDay ${endDay}`)
         console.log(startDay)
 
         //query database for count of each products returned from collection query
         const arr = await Promise.all(res.data.collects.map( async collect => {
           let id = collect.product_id.toString()
-          let queryText = 'SELECT COUNT(*) FROM order_product_data WHERE (product_id = ($1)) AND (day BETWEEN ($2::int) and ($3::int))'
-          let result = await db.query(queryText, [id, startDay, endDay])
+          let queryText = 'SELECT COUNT(*) FROM order_product_data WHERE (product_id = ($1) and shop = ($4)) AND (day BETWEEN ($2::int) and ($3::int))'
+          let result = await db.query(queryText, [id, startDay, endDay, shop.shop])
           console.log("result", result)
           return { productId: collect.product_id, rank: result[0].count}
         }))

@@ -1,6 +1,6 @@
 import React from "react";
 import axios from "axios";
-import {Page, PageActions, Button, Select} from "@shopify/polaris";
+import {Page, PageActions, Button, Select, Spinner} from "@shopify/polaris";
 
 const later = (delay, value) =>
     new Promise(resolve => setTimeout(resolve, delay, value));
@@ -13,7 +13,8 @@ export default class CollectionDropdown extends React.Component {
       selectedIndex: '',
       collectionObjs: [],
       collections: [],
-      newRanking: this.props.new
+      newRanking: this.props.new,
+      loading: true
     }
   }
 
@@ -27,8 +28,11 @@ export default class CollectionDropdown extends React.Component {
       console.log(res.data.collections)
       if (!res.data.collections) throw 'unable to fetch collections'
 
-      this.setState({collectionObjs: res.data.collections})
-      this.setState({collections: this.mapCollections(res.data.collections)})
+      this.setState({
+        collectionObjs: res.data.collections,
+        collections: this.mapCollections(res.data.collections),
+        loading: false
+      })
     })
     .catch(err => {
       console.log(err)
@@ -55,13 +59,19 @@ export default class CollectionDropdown extends React.Component {
   render() {
     return (
       <React.Fragment>
-        <Select
-          label="Collections"
-          options={this.state.collections}
-          onChange={this.handleChange}
-          value={this.state.selected}
-          placeholder="Select a Collection"
-        />
+        { this.state.loading ?
+          <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
+            <Spinner size="large" color="teal"/>
+          </div>
+          :
+          <Select
+            label="Collections"
+            options={this.state.collections}
+            onChange={this.handleChange}
+            value={this.state.selected}
+            placeholder="Select a Collection"
+          />
+        }
 
         <PageActions
           primaryAction={{ content:'Select', onAction: this.selectCollection }}

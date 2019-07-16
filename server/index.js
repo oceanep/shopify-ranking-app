@@ -49,11 +49,12 @@ app.use(
     async afterAuth(ctx) {
 
       const { shop, accessToken } = ctx.session;
-      console.log("accessToken", accessToken)
+      console.log("initial shop, accessToken", shop, accessToken)
       const existingUser = await db.query('SELECT * FROM my_user')
       console.log("existingUser", existingUser)
 
       if (!existingUser || existingUser.length === 0) { // executed on initial install
+        console.log('Initial Install')
         let momentObj = dateFunctions.timeIntervalMoment('180', moment.utc(new Date()))
         let originString = momentObj.format()
         let momentSync = moment.utc(new Date())
@@ -64,10 +65,23 @@ app.use(
         console.log("insertResult", insertResult)
         functions.buildDatabase(shop, accessToken, originString)
 
-      } else {
+      } else if (!(existingUser.filter( user => user.shop === shop)) || existingUser.filter( user => user.shop === shop).length === 0 ) {
+        console.log('Did not find existing user, creating new user', shop, accessToken)
+        let momentObj = dateFunctions.timeIntervalMoment('180', moment.utc(new Date()))
+        let originString = momentObj.format()
+        let momentSync = moment.utc(new Date())
+        let lastSyncDate = momentSync.format()
+        console.log("lastSyncDate", lastSyncDate)
+        const queryText = 'INSERT INTO my_user (shop, access_token, origin, last_sync_date) VALUES($1, $2, $3, $4) RETURNING *'
+        const insertResult = await db.query(queryText, [shop, accessToken, originString, lastSyncDate])
+        console.log("insertResult", insertResult)
+        functions.buildDatabase(shop, accessToken, originString)
+
+      }else {
         // update auth info
-        const updateQueryText = 'UPDATE my_user SET access_token = $1'
-        const updateResult = await db.query(updateQueryText, [accessToken])
+        console.log('Found existing User, updating token', existingUser.filter( user => user.shop === shop))
+        const updateQueryText = 'UPDATE my_user SET access_token = $2 WHERE shop = $1'
+        const updateResult = await db.query(updateQueryText, [shop, accessToken])
         console.log("updateResult", updateResult)
       }
 

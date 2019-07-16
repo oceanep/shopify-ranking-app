@@ -39,7 +39,7 @@ const delete_from_shopify_collection = async (collectionId, productIdArr, shop, 
 
 const filterRanked = (sortedArr, restrictedArr) => {
   const finalArr = sortedArr.filter(function(item) {
-      return !restrictedArr.includes(item.productId.toString());
+      return restrictedArr.length > 0 ? !restrictedArr.includes(item.productId.toString()) : item.productId.toString();
   })
 
   return {
@@ -75,10 +75,10 @@ module.exports = {
       const filterRes = filterRanked(sortedArr, restrictedArr)
       //and delete current restricted
       //compare sortedArr to all restrictedArr, delete products from sortedArr that are still in restrictedArr from shopify
-      const toDeleteArr = sortedArr.filter( (item) => {
+      const toDeleteArr = restrictedArr.length > 0 ? sortedArr.filter( item => {
           console.log('\n\n\n CHECKING DELETES', item.productId)
           return restrictedArr.includes(item.productId.toString());
-      })
+      }) : []
       console.log('\n\n IS IT NEW', toDeleteArr.length, isNew)
       console.log('\n\n TODELETE ARRAY', toDeleteArr)
       if ((toDeleteArr.length > 0) && (!isNew)) {await delete_from_shopify_collection(collectionId, toDeleteArr, shop, accessToken)}

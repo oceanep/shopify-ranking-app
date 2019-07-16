@@ -6,19 +6,24 @@ const db = require('./db')
 
 cron.schedule('0 4 * * *', async () => {
   console.log('build database cron');
-  const auth = await userAuth.getUser();
-  let shop = auth.shop
-  let accessToken = auth.access_token
-  let lastSyncDate = auth.last_sync_date
-  // build database from lastSyncDate 
-  await functions.buildDatabase(shop, accessToken, lastSyncDate)
-  // update lastSyncDate
-  let momentSync = moment.utc(new Date())
-  let newSyncDate = momentSync.format()
-  const queryText = 'UPDATE my_user SET last_sync_date = ($1) RETURNING *'
-  const insertResult = await db.query(queryText, [newSyncDate])
-  console.log("insertResult", insertResult)
+  const shops = await userAuth.getAllShops();
+
+  shops.forEach( async shop => {
+    let storeName = shop.shop
+    let accessToken = shop.access_token
+    let lastSyncDate = shop.last_sync_date
+    // build database from lastSyncDate
+    await functions.buildDatabase(storeName, accessToken, lastSyncDate)
+    // update lastSyncDate
+    let momentSync = moment.utc(new Date())
+    let newSyncDate = momentSync.format()
+    const queryText = 'UPDATE my_user SET last_sync_date = ($1) WHERE shop = $2 RETURNING *'
+    const insertResult = await db.query(queryText, [newSyncDate, storeName])
+    console.log("insertResult", insertResult)
+  })
+
 }, {
-    scheduled: true, 
+    scheduled: true,
     timezone: "Asia/Tokyo"
   });
+ 

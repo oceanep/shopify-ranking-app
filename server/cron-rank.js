@@ -41,14 +41,14 @@ const add_to_shopify_collection = async (collectionId, productIdArr, shop, acces
   }
 }
 
-const cronRestoredSmart = async (collectionId, smartCollection, collectionTitle, timeInterval) => {
+const cronRestoredSmart = async (collectionId, smartCollection, collectionTitle, timeInterval, shop) => {
   try{
     //delete restricted items from database
     const deleteText = 'DELETE FROM restricted_items WHERE collection_id = ($1) RETURNING *'
     const deleteResult = await db.query(deleteText, [collectionId])
     console.log(deleteResult)
     //call ranking with empty restrictedArr
-    let obj = await rank.productRank(collectionId, smartCollection, {}, collectionTitle, timeInterval)
+    let obj = await rank.productRank(collectionId, smartCollection, {}, collectionTitle, timeInterval, {}, shop)
     console.log("ranked in cron", obj)
   }
   catch(err){
@@ -56,16 +56,17 @@ const cronRestoredSmart = async (collectionId, smartCollection, collectionTitle,
   }
 }
 
-const cronRestoredCustom = async (restrictedArr, collectionId, smartCollection, collectionTitle, timeInterval, auth) => {
+const cronRestoredCustom = async (restrictedArr, collectionId, smartCollection, collectionTitle, timeInterval, shop, accessToken) => {
   try{
     //add restricted items back to collection via shopify
-    const addBack = await add_to_shopify_collection(collectionId, restrictedArr,auth.shop, auth.access_token)
+    console.log('\n cron restored custom: ', shop, accessToken)
+    const addBack = await add_to_shopify_collection(collectionId, restrictedArr, shop, accessToken)
     //delete restricted items from database
     const deleteText = 'DELETE FROM restricted_items WHERE collection_id = ($1) RETURNING *'
     const deleteResult = await db.query(deleteText, [collectionId])
     console.log(deleteResult)
     //call ranking with empty restrictedArr
-    let obj = await rank.productRank(collectionId, smartCollection, {}, collectionTitle, timeInterval)
+    let obj = await rank.productRank(collectionId, smartCollection, {}, collectionTitle, timeInterval, {}, shop)
     console.log("ranked in cron", obj)
   }
   catch(err){
@@ -73,10 +74,10 @@ const cronRestoredCustom = async (restrictedArr, collectionId, smartCollection, 
   }
 }
 
-const cronNormal = async (restrictedArr, collectionId, smartCollection, collectionTitle, timeInterval) => {
+const cronNormal = async (restrictedArr, collectionId, smartCollection, collectionTitle, timeInterval, shop) => {
   try{
     //call ranking with dbRestrictedArr
-    let obj = await rank.productRank(collectionId, smartCollection, {}, collectionTitle, timeInterval, restrictedArr)
+    let obj = await rank.productRank(collectionId, smartCollection, {}, collectionTitle, timeInterval, restrictedArr, shop)
     console.log("ranked in cron", obj)
   }
   catch(err){
@@ -85,12 +86,11 @@ const cronNormal = async (restrictedArr, collectionId, smartCollection, collecti
 }
 
 const runCron = async () => {
+  console.log('\n RUNNING CRON \n')
   try{
+    console.log('inside try')
     const allRankedCollections = await db.query(`SELECT * FROM collections`)
-    const auth = await userAuth.getUser();
-    const config = {
-      headers: { 'X-Shopify-Access-Token': auth.access_token }
-    }
+    console.log('cron collections', allRankedCollections)
 
     allRankedCollections.forEach(async collection => {
       let collectionId = collection.collection_id
@@ -98,6 +98,13 @@ const runCron = async () => {
       let smartCollection = collection.smart_collection
       let collectionTitle = collection.collection_name
       let restore = collection.restore
+      let shop = collection.shop
+
+      let auth = await userAuth.getUser(shop);
+      let config = {
+        headers: { 'X-Shopify-Access-Token': auth.access_token }
+      }
+      console.log('inside for each')
       // grab dbRestrictedArr
       const queryText = 'SELECT * FROM restricted_items WHERE collection_id = ($1)'
       const dbRestrictedArr = await db.query(queryText, [collectionId])
@@ -107,9 +114,9 @@ const runCron = async () => {
       if (restore) {
 
         if (smartCollection) {
-          await cronRestoredSmart(collectionId, smartCollection, collectionTitle, timeInterval)
+          await cronRestoredSmart(collectionId, smartCollection, collectionTitle, timeInterval, shop)
         }else{
-          await cronRestoredCustom(restrictedArr, collectionId, smartCollection, collectionTitle, timeInterval, auth)
+          await cronRestoredCustom(restrictedArr, collectionId, smartCollection, collectionTitle, timeInterval, shop, auth.access_token)
         }
         // change restore back to false
         const restoreQuery = 'UPDATE collections SET restore = ($1) WHERE collection_id = ($2) RETURNING *'
@@ -117,7 +124,8 @@ const runCron = async () => {
       }
       else {
         // call rank normally (know if smart or not, know existing for sure)
-        await cronNormal(restrictedArr, collectionId, smartCollection, collectionTitle, timeInterval)
+        console.log('\n CRON RANKING \n')
+        await cronNormal(restrictedArr, collectionId, smartCollection, collectionTitle, timeInterval, shop)
       }
     });
   }

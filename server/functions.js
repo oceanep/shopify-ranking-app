@@ -127,10 +127,11 @@ const productQueryBuilder = (obj) => { // take object products, orderID, month, 
         orderId,
         productId,
         days,
-        createdAt
+        createdAt,
+        shop
     } = obj
-    const queryText = 'INSERT INTO order_product_data (order_id, product_id, day, created_at) VALUES($1, $2, $3, $4) RETURNING *'
-    db.query(queryText, [orderId, productId, days, createdAt])
+    const queryText = 'INSERT INTO order_product_data (order_id, product_id, day, created_at, shop) VALUES($1, $2, $3, $4, $5) RETURNING *'
+    db.query(queryText, [orderId, productId, days, createdAt, shop])
   }
 
 
@@ -154,7 +155,7 @@ module.exports = {
 
                 let target = moment.utc(orderCreatedAt)
                 // get all days from order created at
-                let days = await dateFunctions.dayCalc(target)
+                let days = await dateFunctions.dayCalc(target, shop)
                 console.log("days", days)
 
                 let lineItemsPaginate = order.node.lineItems.pageInfo.hasNextPage; // boolean
@@ -181,7 +182,8 @@ module.exports = {
                     orderId: orderID,
                     productId: product,
                     days: days,
-                    createdAt: orderCreatedAt
+                    createdAt: orderCreatedAt,
+                    shop: shop
                 }
                 ))
 
