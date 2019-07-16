@@ -146,7 +146,9 @@ module.exports = {
             let final = await ordersArray.reduce( async (acc, order) => {
 
                 let accumulator = await acc
-
+                console.log('\n ITERATION \n')
+                console.log(acc)
+                console.log('\n IN ORDERS ARRAY, order id: \n', order.node.id.slice(20))
                 let orderID = order.node.id.slice(20)
                 let orderCreatedAt = order.node.processedAt
                 console.log("\nORDER START")
@@ -164,10 +166,15 @@ module.exports = {
                 let lineItemCursor = resArray[resArray.length - 1].cursor
 
                 // deal with the first page of line items
-                let productIdArray = resArray.map((lineItem) => (lineItem.node.product.id.slice(22)))
+                console.log('\n FIRST PAGE LINE ITEMS \n', resArray)
+                let productIdArray = resArray.filter((lineItem) => (
+                  lineItem.node.product !== null
+                ))
+
+                productIdArray = productIdArray.map( lineItem => lineItem.node.product.id.slice(22) )
 
                 console.log(acc)
-                console.log(productIdArray)
+                console.log('\n product id array after map\n', productIdArray)
 
                 // paginate the remaining line items
                 if (lineItemsPaginate) {
